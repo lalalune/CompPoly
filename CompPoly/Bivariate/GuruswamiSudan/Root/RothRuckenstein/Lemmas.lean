@@ -819,7 +819,8 @@ theorem composeYCoeff_eq_composeY_coeff {R : Type*}
     CBivariate.composeYCoeff Q p depth = (CBivariate.composeY Q p).coeff depth := by
   unfold CBivariate.composeYCoeff CBivariate.composeY CPolynomial.eval
   simp [cpoly_mulPowCoeff_eq_coeff_mul_pow]
-  simpa using (composeY_coeff_fold_eq Q.val p depth)
+  simpa [CPolynomial.Raw.eval, CPolynomial.Raw.eval₂] using
+    (composeY_coeff_fold_eq Q.val p depth)
 
 theorem fold_range_coeff_add_mul_pow {R : Type*}
     [Semiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
@@ -1002,7 +1003,8 @@ theorem composeYCoeff_monomial_zero_eq_composeY_coeff_zero {F : Type*}
       (CBivariate.composeY Q p).coeff 0 := by
   unfold CBivariate.composeYCoeff CBivariate.composeY CPolynomial.eval
   simp [cpoly_mulPowCoeff_monomial_zero_depth_zero]
-  simpa using (composeY_coeff_zero_fold_eq Q.val p)
+  simpa [CPolynomial.Raw.eval, CPolynomial.Raw.eval₂] using
+    (composeY_coeff_zero_fold_eq Q.val p)
 
 theorem initialCoefficientPolynomial_eval_eq_composeY_coeff_zero {F : Type*}
     [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] [DecidableEq F]
