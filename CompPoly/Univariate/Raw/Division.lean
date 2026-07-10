@@ -28,7 +28,7 @@ def divModByMonicAux [CommRing R] (p : CPolynomial.Raw R) (q : CPolynomial.Raw R
 where
   go : Nat → CPolynomial.Raw R → CPolynomial.Raw R → CPolynomial.Raw R × CPolynomial.Raw R
   | 0, p, _ => ⟨0, p⟩
-  | n + 1, p, q =>
+  | n+1, p, q =>
       if p.size < q.size then
         ⟨0, p⟩
       else
@@ -36,7 +36,7 @@ where
         let q' := C p.leadingCoeff * (q * X.pow k)
         let p' := (p - q').trim
         let (e, f) := go n p' q
-        ⟨e + C p.leadingCoeff * X ^ k, f⟩
+        ⟨e + C p.leadingCoeff * X^k, f⟩
 
 /-- Division of `p : CPolynomial.Raw R` by a monic `q : CPolynomial.Raw R`. -/
 def divByMonic [CommRing R] (p : CPolynomial.Raw R) (q : CPolynomial.Raw R) :
@@ -105,8 +105,8 @@ Remainder by a monic polynomial through reversal and truncated products.
 
 For canonical monic inputs this computes the quotient from the reversed divisor
 inverse modulo `X^k`, then subtracts only the low coefficients needed for the
-remainder. Inputs outside that executable contract fall back to the
-remainder-only implementation.
+remainder. Inputs outside the fast-path guard use the simple monic-remainder
+implementation.
 -/
 @[inline, specialize]
 def modByMonicByReversal [Field R] [LawfulBEq R] (M : MulLowContext R)
@@ -133,7 +133,7 @@ def div [Field R] (p q : CPolynomial.Raw R) : CPolynomial.Raw R :=
 
 /-- Modulus of two `CPolynomial.Raw`s. -/
 def mod [Field R] (p q : CPolynomial.Raw R) : CPolynomial.Raw R :=
-  p.modByMonic (C (q.leadingCoeff)⁻¹ * q)
+  (C (q.leadingCoeff)⁻¹ • p).modByMonic (C (q.leadingCoeff)⁻¹ * q)
 
 instance [Field R] : Div (CPolynomial.Raw R) := ⟨div⟩
 instance [Field R] : Mod (CPolynomial.Raw R) := ⟨mod⟩

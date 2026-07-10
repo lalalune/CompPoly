@@ -5,6 +5,7 @@ Authors: Juan Conejero, Valerii Huhnin
 -/
 import CompPoly.Univariate.Basic
 import CompPoly.Univariate.DivisionCorrectness
+import CompPoly.ToMathlib.Order.WithBot
 
 /-!
 # Extended Euclidean Algorithm for `CPolynomial`
@@ -12,6 +13,10 @@ import CompPoly.Univariate.DivisionCorrectness
 `xgcd p q` returns a triple `(r, s, t)` with `r = s * p + t * q`.
 Early stop when `r.natDegree < threshold`.
 The default `threshold = 0` makes `r` the Greatest Common Divisor of `p` and `q`.
+
+For positive thresholds, `xgcd_stopSpec` characterizes the output: `BezoutStopSpec` packages
+the Bézout identity together with the residue/cofactor degree bounds at the stopping point,
+via the loop invariant `BezoutDegreeInvariant`.
 -/
 
 namespace CompPoly
@@ -91,20 +96,10 @@ theorem xgcd_bezout [Field R] [BEq R] [LawfulBEq R]
 Correctness theorems for `xgcd` with the default threshold 0.
 -/
 
-private lemma root_div_eq [Field R] [BEq R] [LawfulBEq R]
-    (p q : CPolynomial R) :
-    _root_.CompPoly.div p q = p.div q := rfl
-
-private lemma root_mod_eq [Field R] [BEq R] [LawfulBEq R]
-    (p q : CPolynomial R) :
-    _root_.CompPoly.mod p q = p.mod q := rfl
-
 private lemma toPoly_sub_div_mul [Field R] [BEq R] [LawfulBEq R]
     (r r' a b : CPolynomial R) :
     (a - (r' / r) * b).toPoly = a.toPoly - (r'.toPoly / r.toPoly) * b.toPoly := by
-  change (a - _root_.CompPoly.div r' r * b).toPoly =
-    a.toPoly - (r'.toPoly / r.toPoly) * b.toPoly
-  rw [root_div_eq, toPoly_sub, toPoly_mul, div_toPoly_eq_div]
+  rw [show r' / r = r'.div r from rfl, toPoly_sub, toPoly_mul, div_toPoly_eq_div]
 
 /-- The gcd component of CompPoly's `xgcdAux` at threshold `0` coincides with
 Mathlib's `EuclideanDomain.gcd`. -/
@@ -227,8 +222,8 @@ private theorem Raw.toPoly_smul [Semiring R] [BEq R] [LawfulBEq R]
 theorem monicNormalize_toPoly_eq_normalize
     [Field R] [BEq R] [LawfulBEq R] [DecidableEq R]
     (p : CPolynomial R) :
-    (_root_.CompPoly.monicNormalize p).toPoly = normalize p.toPoly := by
-  unfold _root_.CompPoly.monicNormalize CPolynomial.Raw.monicNormalize
+    (CPolynomial.monicNormalize p).toPoly = normalize p.toPoly := by
+  unfold CPolynomial.monicNormalize CPolynomial.Raw.monicNormalize
   rw [ofArray_toPoly, CPolynomial.trim_eq]
   by_cases hpraw : ((p.val : CPolynomial.Raw R) == 0)
   · have hp : p = 0 := CPolynomial.ext (LawfulBEq.eq_of_beq hpraw)
@@ -253,7 +248,7 @@ private theorem gcdMonicWithFuel_toPoly_eq_normalize_gcd
     [Field R] [BEq R] [LawfulBEq R] [DecidableEq R]
     (fuel : ℕ) (p q : CPolynomial R)
     (hfuel : q.toPoly.degree < fuel) :
-    (_root_.CompPoly.gcdMonicWithFuel fuel p q).toPoly =
+    (CPolynomial.gcdMonicWithFuel fuel p q).toPoly =
       normalize (EuclideanDomain.gcd p.toPoly q.toPoly) := by
   induction fuel generalizing p q with
   | zero =>
@@ -262,48 +257,54 @@ private theorem gcdMonicWithFuel_toPoly_eq_normalize_gcd
       have hq : q = 0 := (toPoly_eq_zero_iff q).mp hqpoly
       subst q
       rw [CPolynomial.toPoly_zero]
-      change (_root_.CompPoly.monicNormalize p).toPoly =
+      change (CPolynomial.monicNormalize p).toPoly =
         normalize (EuclideanDomain.gcd p.toPoly (0 : Polynomial R))
       rw [monicNormalize_toPoly_eq_normalize, EuclideanDomain.gcd_zero_right]
   | succ fuel ih =>
       by_cases hq : q = 0
       · subst q
-        simp [_root_.CompPoly.gcdMonicWithFuel, CPolynomial.Raw.gcdMonicWithFuel,
+        simp [CPolynomial.gcdMonicWithFuel, CPolynomial.Raw.gcdMonicWithFuel,
           CPolynomial.trim_eq, CPolynomial.toPoly_zero]
         have hzero : (↑(0 : CPolynomial R) : CPolynomial.Raw R) = (#[] : CPolynomial.Raw R) := rfl
         rw [if_pos hzero]
-        change (_root_.CompPoly.monicNormalize p).toPoly = normalize p.toPoly
+        change (CPolynomial.monicNormalize p).toPoly = normalize p.toPoly
         exact monicNormalize_toPoly_eq_normalize p
       · have hqraw : ¬((q.val : CPolynomial.Raw R) == 0) := by
           intro h
           exact hq (CPolynomial.ext (LawfulBEq.eq_of_beq h))
-        rw [_root_.CompPoly.gcdMonicWithFuel, CPolynomial.Raw.gcdMonicWithFuel,
+        rw [CPolynomial.gcdMonicWithFuel, CPolynomial.Raw.gcdMonicWithFuel,
           CPolynomial.trim_eq, CPolynomial.trim_eq, if_neg hqraw]
-        change (_root_.CompPoly.gcdMonicWithFuel fuel q (p % q)).toPoly =
+        change (CPolynomial.gcdMonicWithFuel fuel q (p % q)).toPoly =
           normalize (EuclideanDomain.gcd p.toPoly q.toPoly)
         rw [ih]
-        · rw [show (p % q).toPoly = p.toPoly % q.toPoly by
-            change (_root_.CompPoly.mod p q).toPoly = p.toPoly % q.toPoly
-            rw [root_mod_eq]
-            exact mod_toPoly_eq_smul_mod p q hq]
+        · rw [show (p % q).toPoly = q.leadingCoeff⁻¹ • (p.toPoly % q.toPoly) by
+            exact mod_toPoly_eq_smul_mod p q]
+          have hunit : IsUnit (Polynomial.C q.leadingCoeff⁻¹ : Polynomial R) := by
+            exact Polynomial.isUnit_C.mpr
+              (isUnit_iff_ne_zero.mpr (inv_ne_zero (CPolynomial.leadingCoeff_ne_zero hq)))
+          have hassoc :
+              Associated (q.leadingCoeff⁻¹ • (p.toPoly % q.toPoly))
+                (p.toPoly % q.toPoly) := by
+            simpa [Polynomial.smul_eq_C_mul] using
+              associated_unit_mul_left (p.toPoly % q.toPoly)
+                (Polynomial.C q.leadingCoeff⁻¹) hunit
           refine normalize_eq_normalize_iff_associated.mpr
             (associated_of_dvd_dvd ?_ ?_)
           · refine EuclideanDomain.dvd_gcd ?_ (EuclideanDomain.gcd_dvd_left _ _)
             exact (EuclideanDomain.dvd_mod_iff (EuclideanDomain.gcd_dvd_left
-                q.toPoly (p.toPoly % q.toPoly))).mp
+                q.toPoly (q.leadingCoeff⁻¹ • (p.toPoly % q.toPoly)))).mp
               ((EuclideanDomain.gcd_dvd_right q.toPoly
-                (p.toPoly % q.toPoly)))
+                (q.leadingCoeff⁻¹ • (p.toPoly % q.toPoly))).trans hassoc.dvd)
           · refine EuclideanDomain.dvd_gcd (EuclideanDomain.gcd_dvd_right _ _) ?_
             exact ((EuclideanDomain.dvd_mod_iff
                 (EuclideanDomain.gcd_dvd_right p.toPoly q.toPoly)).mpr
-              (EuclideanDomain.gcd_dvd_left p.toPoly q.toPoly))
+              (EuclideanDomain.gcd_dvd_left p.toPoly q.toPoly)).trans hassoc.symm.dvd
         · have hqpoly : q.toPoly ≠ 0 := (toPoly_eq_zero_iff q).not.mpr hq
           have hmod :
               (p % q).toPoly.degree ≤ (p.toPoly % q.toPoly).degree := by
-            rw [show (p % q).toPoly = p.toPoly % q.toPoly by
-              change (_root_.CompPoly.mod p q).toPoly = p.toPoly % q.toPoly
-              rw [root_mod_eq]
-              exact mod_toPoly_eq_smul_mod p q hq]
+            rw [show (p % q).toPoly = q.leadingCoeff⁻¹ • (p.toPoly % q.toPoly) by
+              exact mod_toPoly_eq_smul_mod p q]
+            exact Polynomial.degree_smul_le _ _
           exact lt_of_le_of_lt hmod
             (lt_of_lt_of_le (Polynomial.degree_mod_lt _ hqpoly)
               (Order.le_of_lt_succ hfuel))
@@ -313,10 +314,11 @@ image. -/
 theorem gcdMonic_toPoly_eq_normalize_gcd
     [Field R] [BEq R] [LawfulBEq R] [DecidableEq R]
     (p q : CPolynomial R) :
-    (_root_.CompPoly.gcdMonic p q).toPoly =
+    (CPolynomial.gcdMonic p q).toPoly =
       normalize (EuclideanDomain.gcd p.toPoly q.toPoly) := by
-  simpa [_root_.CompPoly.gcdMonic, CPolynomial.Raw.gcdMonic] using
-    gcdMonicWithFuel_toPoly_eq_normalize_gcd
+  change (CPolynomial.gcdMonicWithFuel (p.val.size + q.val.size + 1) p q).toPoly =
+      normalize (EuclideanDomain.gcd p.toPoly q.toPoly)
+  exact gcdMonicWithFuel_toPoly_eq_normalize_gcd
       (p.val.size + q.val.size + 1) p q (by
         have hqdeg : q.toPoly.degree < q.val.size := by
           rw [← degree_toPoly]
@@ -333,9 +335,9 @@ extended gcd. -/
 theorem gcdMonic_eq_normXgcd_fst
     [Field R] [BEq R] [LawfulBEq R] [DecidableEq R]
     (p q : CPolynomial R) :
-    _root_.CompPoly.gcdMonic p q = (CPolynomial.normXgcd p q).1 := by
+    CPolynomial.gcdMonic p q = (CPolynomial.normXgcd p q).1 := by
   apply toPolyLinearEquiv.injective
-  change (_root_.CompPoly.gcdMonic p q).toPoly = (CPolynomial.normXgcd p q).1.toPoly
+  change (CPolynomial.gcdMonic p q).toPoly = (CPolynomial.normXgcd p q).1.toPoly
   rw [gcdMonic_toPoly_eq_normalize_gcd, normXgcd_fst_toPoly]
 
 /-- The Bezout component of `normXgcd` under `toPoly` is Mathlib's
@@ -365,5 +367,144 @@ theorem normXgcd_fst_comm
   exact dvd_gcd (gcd_dvd_right ..) (gcd_dvd_left ..)
 
 end CPolynomial
+
+/-! ## Stop specification for positive thresholds
+
+`BezoutDegreeInvariant` is the invariant of the partial-EEA (`xgcd`) loop: each non-stop
+step preserves it (`BezoutDegreeInvariant.step`), and at the stopping threshold it yields
+the output specification `BezoutStopSpec` (`xgcd_stopSpec`).
+
+This is the classical degree theory of the extended Euclidean algorithm — the row identity
+`deg t + deg r' = deg g₀` and the complementary cofactor bound at the stop — i.e. the
+contract behind rational-function reconstruction and Reed-Solomon decoding. -/
+
+open Polynomial
+open CPolynomial hiding X C add_comm zero_add mul_comm mul_zero mul_one one_mul mul_assoc
+
+variable {F : Type*}
+
+/-- Loop invariant of one partial-EEA (`xgcd`) step. -/
+structure BezoutDegreeInvariant [Ring F] (g₀ g₁ : F[X]) (threshold : ℕ)
+    (r s t r' s' t' : F[X]) : Prop where
+  bez : r = s * g₀ + t * g₁
+  bez' : r' = s' * g₀ + t' * g₁
+  det : IsUnit (s' * t - s * t')
+  degt : t'.degree < t.degree
+  degr : r.degree < r'.degree
+  thr : threshold ≤ r'.degree
+
+/-- `BezoutDegreeInvariant` on the `toPoly` images of a `CPolynomial` reference pair `g₀, g₁` and
+the two state triples `(r, s, t)`, `(r', s', t')`. -/
+abbrev BezoutDegreeInvariantOf [Ring F] (g₀ g₁ : CPolynomial F) (threshold : ℕ)
+    (r s t r' s' t' : CPolynomial F) : Prop :=
+  BezoutDegreeInvariant
+    g₀.toPoly g₁.toPoly threshold r.toPoly s.toPoly t.toPoly r'.toPoly s'.toPoly t'.toPoly
+
+/-- `BezoutDegreeInvariant` implies `deg t + deg r' = deg g₀`. -/
+lemma BezoutDegreeInvariant.degree_complement [CommRing F] [NoZeroDivisors F] [Nontrivial F]
+    {g₀ g₁ : F[X]} {threshold : ℕ} {r s t r' s' t' : F[X]}
+    (h : BezoutDegreeInvariant g₀ g₁ threshold r s t r' s' t') :
+    t.degree + r'.degree = g₀.degree := by
+  have hid : t * r' - t' * r = (s' * t - s * t') * g₀ := by rw [h.bez, h.bez']; ring
+  have hdom : (t' * r).degree < (t * r').degree := by simpa using WithBot.add_lt_add h.degt h.degr
+  rw [← degree_mul, ← degree_sub_eq_left_of_degree_lt hdom, hid, degree_mul,
+    degree_eq_zero_of_isUnit h.det, zero_add]
+
+/-- One Euclidean step grows the cofactor degree: `deg t < deg (t' - (r'/r) t)`. -/
+private lemma cofactor_degree_grows [Field F]
+    (r r' t t' : F[X]) (hr : r ≠ 0)
+    (hrr : r.degree < r'.degree) (htt : t'.degree < t.degree) :
+    t.degree < (t' - r' / r * t).degree := by
+  have hgt : t.degree < (r' / r * t).degree := by
+    simpa using WithBot.add_lt_add_right (degree_ne_bot.mpr (ne_zero_of_degree_gt htt))
+      (pos_of_lt_add_right (degree_add_div hr hrr.le ▸ hrr))
+  rwa [degree_sub_eq_right_of_degree_lt (htt.trans hgt)]
+
+/-- A non-stop Euclidean step preserves the invariant. -/
+lemma BezoutDegreeInvariant.step [Field F]
+    {g₀ g₁ : F[X]} {threshold : ℕ} {r s t r' s' t' : F[X]}
+    (h : BezoutDegreeInvariant g₀ g₁ threshold r s t r' s' t') (hr : r ≠ 0)
+    (hstop : ¬ r.natDegree < threshold) :
+    BezoutDegreeInvariant
+      g₀ g₁ threshold (r' - r' / r * r) (s' - r' / r * s) (t' - r' / r * t) r s t := by
+  refine ⟨(by rw [h.bez, h.bez']; ring), h.bez, ?_, ?_, ?_, ?_⟩
+  · ring_nf; simpa [mul_comm] using h.det.neg
+  · exact cofactor_degree_grows _ _ _ _ hr h.degr h.degt
+  · rw [mul_comm, ← EuclideanDomain.mod_eq_sub_mul_div]; exact degree_mod_lt _ hr
+  · rw [degree_eq_natDegree hr]; exact_mod_cast not_lt.mp hstop
+
+/-- Stop spec of the partial EEA: `R = S g₀ + T g₁`, residue degree below `threshold`,
+and the cofactor `T` nonzero with complementary degree `deg T + threshold ≤ deg g₀`. -/
+structure BezoutStopSpec [Semiring F] (g₀ g₁ : F[X]) (threshold : ℕ) (R S T : F[X]) : Prop where
+  bez : R = S * g₀ + T * g₁
+  resDeg : R.natDegree < threshold
+  cofDeg : T.degree + threshold ≤ g₀.degree
+  cofNe : T ≠ 0
+
+/-- `BezoutStopSpec` on the `toPoly` images of a `CPolynomial` reference pair `g₀, g₁` and
+result triple. -/
+abbrev BezoutStopSpecOf [Semiring F] (g₀ g₁ : CPolynomial F) (threshold : ℕ)
+    (result : CPolynomial F × CPolynomial F × CPolynomial F) : Prop :=
+  BezoutStopSpec
+    g₀.toPoly g₁.toPoly threshold result.1.toPoly result.2.1.toPoly result.2.2.toPoly
+
+/-- `BezoutDegreeInvariant` implies `xgcdAux`'s output satisfies the stop spec. -/
+lemma xgcdAux_stopSpec_of_invariant
+    [Field F] [BEq F] [LawfulBEq F] (g₀ g₁ : CPolynomial F) (threshold : ℕ) (hthr : 1 ≤ threshold)
+    (hg₀ : g₀.toPoly ≠ 0) :
+    ∀ (n : ℕ) (r s t r' s' t' : CPolynomial F),
+      BezoutDegreeInvariantOf g₀ g₁ threshold r s t r' s' t' →
+      r.natDegree < n →
+      BezoutStopSpecOf g₀ g₁ threshold (xgcdAux threshold n r s t r' s' t') := by
+  intro n; induction n with
+  | zero => intros; contradiction
+  | succ k ih =>
+    intro r s t r' s' t' hinv hlt; simp only [xgcdAux]
+    by_cases hd : r.natDegree < threshold
+    · rw [if_pos hd]
+      exact ⟨hinv.bez, natDegree_toPoly r ▸ hd,
+        (add_le_add le_rfl hinv.thr).trans_eq hinv.degree_complement, fun htz =>
+        hg₀ (Polynomial.degree_eq_bot.mp (by simp [← hinv.degree_complement, htz]))⟩
+    · rw [if_neg hd]; have hrne : r ≠ 0 := fun h => hd (by rwa [h]); rw [if_neg (by simpa)]
+      have hd' : ¬ r.toPoly.natDegree < threshold := natDegree_toPoly r ▸ hd
+      have hstep := hinv.step ((toPoly_eq_zero_iff _).not.mpr hrne) hd'
+      simp only [← toPoly_sub_div_mul] at hstep
+      refine ih _ _ _ _ _ _ hstep ((Nat.lt_succ_iff.mp hlt).trans_lt' ?_)
+      rw [natDegree_toPoly, natDegree_toPoly, toPoly_sub_div_mul, _root_.mul_comm,
+        ← EuclideanDomain.mod_eq_sub_mul_div]
+      exact r'.toPoly.natDegree_mod_lt (by omega)
+
+/-- `xgcd`'s output satisfies the stop spec. -/
+lemma xgcd_stopSpec
+    [Field F] [BEq F] [LawfulBEq F] (g₀ g₁ : CPolynomial F) (threshold : ℕ)
+    (hdeg : g₁.degree < g₀.degree)
+    (hthr : 1 ≤ threshold) (hthr' : threshold ≤ g₀.degree) :
+    BezoutStopSpecOf g₀ g₁ threshold (xgcd g₀ g₁ threshold) := by
+  have hdeg' : g₁.toPoly.degree < g₀.toPoly.degree := by rwa [← degree_toPoly, ← degree_toPoly]
+  have hg₀poly : g₀.toPoly ≠ 0 := Polynomial.ne_zero_of_degree_gt hdeg'
+  have hthr'poly : threshold ≤ g₀.toPoly.degree := degree_toPoly g₀ ▸ hthr'
+  have hstop : ¬ g₀.natDegree < threshold :=
+    natDegree_toPoly g₀ ▸ (le_natDegree_of_coe_le_degree hthr'poly).not_gt
+  have hge1 : 1 ≤ g₀.toPoly.natDegree := natDegree_toPoly g₀ ▸ hthr.trans (not_lt.mp hstop)
+  have hM : g₀.toPoly.natDegree + 1 ≤ g₀.val.size :=
+    (Polynomial.natDegree_lt_iff_degree_lt hg₀poly).mpr
+      (degree_toPoly g₀ ▸ mem_degreeLT_iff_size_le.mpr le_rfl)
+  obtain ⟨N, hN⟩ : ∃ N, g₀.val.size = N + 1 := ⟨g₀.val.size - 1, by omega⟩
+  obtain ⟨hr1, hs1, ht1⟩ : (g₁ - g₁/g₀*g₀).toPoly = g₁.toPoly ∧ (0 - g₁/g₀*1).toPoly = 0 ∧
+      (1 - g₁/g₀*0).toPoly = 1 := by
+    refine ⟨?_, ?_, ?_⟩ <;>
+      rw [toPoly_sub_div_mul, (Polynomial.div_eq_zero_iff hg₀poly).mpr hdeg'] <;>
+      simp [toPoly_zero, toPoly_one]
+  simp only [xgcd, hN, xgcdAux]
+  rw [if_neg hstop, if_neg (by simpa using (toPoly_eq_zero_iff _).not.mp hg₀poly)]
+  have hinv : BezoutDegreeInvariantOf g₀ g₁ threshold
+      (g₁ - g₁/g₀*g₀) (0 - g₁/g₀*1) (1 - g₁/g₀*0) g₀ 1 0 := by
+    rw [BezoutDegreeInvariantOf, hr1, hs1, ht1, toPoly_one, toPoly_zero]
+    exact ⟨by ring, by ring, by simp, by simp, hdeg', hthr'poly⟩
+  have hfuel : (g₁ - g₁/g₀*g₀).natDegree < N := by
+    rw [natDegree_toPoly, hr1]
+    rcases eq_or_ne g₁.toPoly 0 with hz | hz; rw [hz, Polynomial.natDegree_zero]; omega
+    exact (Polynomial.natDegree_lt_natDegree hz hdeg').trans_le (by omega)
+  exact xgcdAux_stopSpec_of_invariant _ _ _ hthr hg₀poly _ _ _ _ _ _ _ hinv hfuel
 
 end CompPoly

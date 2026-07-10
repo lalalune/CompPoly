@@ -64,7 +64,7 @@ noncomputable def monomialBasisOfDegreeLT {n : ℕ} : Basis (Fin n) L (L⦃< n�
       simp only [SetLike.mk_smul_mk]
       conv =>
         lhs
-        simp only [Finsupp.sum, AddSubmonoidClass.coe_finset_sum, finset_sum_coeff, coeff_smul,
+        simp only [Finsupp.sum, AddSubmonoidClass.coe_finsetSum, finsetSum_coeff, coeff_smul,
           coeff_X_pow, smul_eq_mul, mul_ite, mul_one, mul_zero, monomials_in_submodule, v]
       -- ⊢ (∑ x ∈ l.support, if ↑i = ↑x then l x else 0) = l i
       simp_rw [Fin.val_eq_val, eq_comm]
@@ -110,7 +110,7 @@ noncomputable def monomialBasisOfDegreeLT {n : ℕ} : Basis (Fin n) L (L⦃< n�
         -- we have to convert (↑p).sum into Fin n → L form using Polynomial.sum_fin
         simp only [monomial_zero_right, implies_true, ←Polynomial.sum_fin (hn := h_deg_p)]
       -- ⊢ ↑(∑ i, c i • monomials_in_submodule i) = ∑ i, (monomial ↑i) ((↑p).coeff ↑i)
-      rw [AddSubmonoidClass.coe_finset_sum] -- bring both sides back to L[X]
+      rw [AddSubmonoidClass.coe_finsetSum] -- bring both sides back to L[X]
       apply Finset.sum_congr rfl
       intro ⟨i, hi_finN⟩ hi
       simp only [SetLike.mk_smul_mk, c, monomials_in_submodule]
@@ -127,8 +127,8 @@ theorem finrank_degreeLT_n (n : ℕ) : Module.finrank L (L⦃< n⦄[X]) = n := b
   rw [Module.finrank_eq_card_basis monomial_basis]
   rw [Fintype.card_fin]
 
-instance finiteDimensional_degreeLT {n : ℕ} (h_n_pos : 0 < n) :
-  FiniteDimensional L L⦃< n⦄[X] := by
+theorem finiteDimensional_degreeLT {n : ℕ} (h_n_pos : 0 < n) :
+    FiniteDimensional L L⦃< n⦄[X] := by
   have h : 0 < Module.finrank L (L⦃< n⦄[X]) := by
     rw [finrank_degreeLT_n n]
     omega

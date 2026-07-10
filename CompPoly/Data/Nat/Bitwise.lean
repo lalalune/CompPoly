@@ -547,9 +547,8 @@ lemma sum_eq_xor_plus_twice_and (n : Nat) : ∀ m : ℕ, n + m = (n ^^^ m) + 2 *
     rw [zero_add, Nat.zero_and, mul_zero, add_zero, Nat.zero_xor]
   | bit bn n2 ih =>
     intro m
-    let resDiv2M := Nat.boddDiv2 m
-    let bm := resDiv2M.fst
-    let m2 := resDiv2M.snd
+    let bm := Nat.bodd m
+    let m2 := Nat.div2 m
     have h_m2 : m2 = Nat.div2 m := by
       rfl
     have h_bm : bm = Nat.bodd m := by
@@ -1317,7 +1316,6 @@ lemma exist_bit_diff_if_diff {n: ℕ} (a: Fin (2^n)) (b: Fin (2^n)) (h_a_ne_b: a
     apply Fin.eq_of_val_eq
     apply eq_iff_eq_all_getBits.mpr
     intro k
-    change getBit k a = getBit k b
     rw [getBit_of_lt_two_pow, getBit_of_lt_two_pow]
     if h_k: k < n then
       simp only [h_k, ↓reduceIte]
@@ -1366,7 +1364,7 @@ lemma getBit_of_binaryFinMapToNat {n : ℕ} (m : Fin n → ℕ) (h_binary: ∀ j
   induction n with
   | zero =>
     intro k;
-    simp only [Nat.pow_zero, Fin.val_eq_zero, not_lt_zero', ↓reduceDIte]
+    simp only [Nat.pow_zero, Fin.val_eq_zero, Nat.not_lt_zero, ↓reduceDIte]
     exact getBit_zero_eq_zero
   | succ n ih =>
     -- Inductive step: Assume the property holds for `n`, prove it for `n+1`.
@@ -1416,7 +1414,6 @@ lemma getBit_of_binaryFinMapToNat {n : ℕ} (m : Fin n → ℕ) (h_binary: ∀ j
         simp only [BEq.rfl, ↓reduceIte]
     else
       have hBitLhs := h_getBit_prevSum (k:=k)
-      simp only at hBitLhs
       rw [h_prevSum_eq.symm] at hBitLhs
       rw [hBitLhs]
       if h_k_lt_n: k < n then

@@ -5,16 +5,20 @@ Authors: Valerii Huhnin
 -/
 
 import CompPoly.Bivariate.GuruswamiSudan.Executable
+import CompPoly.Bivariate.GuruswamiSudan.Interpolation.Dense.Correctness
+import CompPoly.Bivariate.GuruswamiSudan.Interpolation.Koetter.Correctness.Completeness
+import CompPoly.Bivariate.GuruswamiSudan.Interpolation.LeeOSullivan.Correctness
 import CompPoly.Bivariate.GuruswamiSudan.Root.FieldRoots.KoalaBear
+import CompPoly.Bivariate.GuruswamiSudan.Root.RothRuckenstein.Correctness
+import CompPoly.LinearAlgebra.PolynomialMatrix.MuldersStorjohannCorrectness.Fast
 import CompPoly.Univariate.BatchEval.Context
 import CompPoly.Univariate.NTT.KoalaBear
 
 /-!
 # Guruswami-Sudan Concrete Implementations
 
-Named concrete dense-interpolation/Roth-Ruckenstein implementations and
-correctness theorem specializations for the implementations exercised by the
-benchmark suite.
+Named concrete dense and Lee-O'Sullivan interpolation/Roth-Ruckenstein
+implementations and correctness theorem specializations for the decoder surface.
 -/
 
 namespace CompPoly
@@ -69,7 +73,7 @@ def koalaBearLeeDirectInterpContext : GSInterpContext KoalaBear.Field :=
   LeeOSullivan.leeOSullivanInterpContext
     (CPolynomial.VanishingPolynomialContext.direct (F := KoalaBear.Field))
     (CPolynomial.BatchEvalContext.horner KoalaBear.Field)
-    (PolynomialMatrix.muldersStorjohannReducerContext KoalaBear.Field)
+    (PolynomialMatrix.muldersStorjohannFastReducerContext KoalaBear.Field)
 
 /-- Lee-O'Sullivan interpolation over canonical KoalaBear with subproduct-tree vanishing setup. -/
 def koalaBearLeeSubproductInterpContext : GSInterpContext KoalaBear.Field :=
@@ -77,14 +81,14 @@ def koalaBearLeeSubproductInterpContext : GSInterpContext KoalaBear.Field :=
     (CPolynomial.VanishingPolynomialContext.subproduct
       koalaBearNttFastMulContext)
     koalaBearNttFastBatchEvalContext
-    (PolynomialMatrix.muldersStorjohannReducerContext KoalaBear.Field)
+    (PolynomialMatrix.muldersStorjohannFastReducerContext KoalaBear.Field)
 
 /-- Lee-O'Sullivan interpolation over native-word fast KoalaBear with direct vanishing setup. -/
 def fastKoalaBearLeeDirectInterpContext : GSInterpContext KoalaBear.Fast.Field :=
   LeeOSullivan.leeOSullivanInterpContext
     (CPolynomial.VanishingPolynomialContext.direct (F := KoalaBear.Fast.Field))
     (CPolynomial.BatchEvalContext.horner KoalaBear.Fast.Field)
-    (PolynomialMatrix.muldersStorjohannReducerContext KoalaBear.Fast.Field)
+    (PolynomialMatrix.muldersStorjohannFastReducerContext KoalaBear.Fast.Field)
 
 /-- Lee-O'Sullivan interpolation over native-word fast KoalaBear with
 subproduct-tree vanishing setup. -/
@@ -93,7 +97,7 @@ def fastKoalaBearLeeSubproductInterpContext : GSInterpContext KoalaBear.Fast.Fie
     (CPolynomial.VanishingPolynomialContext.subproduct
       fastKoalaBearNttFastMulContext)
     fastKoalaBearNttFastBatchEvalContext
-    (PolynomialMatrix.muldersStorjohannReducerContext KoalaBear.Fast.Field)
+    (PolynomialMatrix.muldersStorjohannFastReducerContext KoalaBear.Fast.Field)
 
 /-- Roth-Ruckenstein root backend over canonical KoalaBear. -/
 def koalaBearRothRootContext : GSRootContext KoalaBear.Field :=

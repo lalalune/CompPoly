@@ -5,6 +5,9 @@ Authors: Valerii Huhnin
 -/
 
 import CompPoly.Bivariate.GuruswamiSudan.Filter
+import CompPoly.Bivariate.GuruswamiSudan.Interpolation.Dense.Correctness
+import CompPoly.Bivariate.GuruswamiSudan.Root.FieldRoots
+import CompPoly.Bivariate.GuruswamiSudan.Root.RothRuckenstein.Correctness
 import Mathlib.Algebra.Field.ZMod
 
 /-!

@@ -4,7 +4,15 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Valerii Huhnin
 -/
 
+import CompPoly.LinearAlgebra.Dense.Basic
+import CompPoly.LinearAlgebra.Dense.RowOps
+import CompPoly.LinearAlgebra.Dense.RowOpsCorrectness
+import CompPoly.LinearAlgebra.Dense.RrefSemantics
+import CompPoly.LinearAlgebra.Dense.RrefShape
+import CompPoly.LinearAlgebra.Dense.Kernel
+import CompPoly.LinearAlgebra.Dense.KernelInPlace
 import CompPoly.LinearAlgebra.Dense.KernelCorrectness
+import CompPoly.LinearAlgebra.Dense.KernelInPlaceCorrectness
 
 /-!
 # Dense Linear Algebra

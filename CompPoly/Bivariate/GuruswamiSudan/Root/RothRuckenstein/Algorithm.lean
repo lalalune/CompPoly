@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Valerii Huhnin
 -/
 
-import CompPoly.Bivariate.GuruswamiSudan.Root.FieldRoots
+import CompPoly.Bivariate.GuruswamiSudan.Root.Common
 
 /-!
 # Roth-Ruckenstein-Style Root Finding
@@ -27,7 +27,7 @@ open CBivariate
 
 /-- Substitute `Y = a + X * Y` into a bivariate polynomial. -/
 def substituteYRootPlusXY {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] [DecidableEq F]
+    [Field F] [BEq F] [LawfulBEq F] [DecidableEq F]
     (Q : CBivariate F) (a : F) : CBivariate F :=
   Id.run do
     let mut out : CBivariate F := default
@@ -43,17 +43,9 @@ def substituteYRootPlusXY {F : Type*}
 
 /-- One residual step in the transformed Roth-Ruckenstein recursion. -/
 def transformedRothRuckensteinResidual {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] [DecidableEq F]
+    [Field F] [BEq F] [LawfulBEq F] [DecidableEq F]
     (Q : CBivariate F) (a : F) : CBivariate F :=
   CBivariate.stripXAdicFactor (substituteYRootPlusXY Q a)
-
-/-- The coefficient of `Y^j` in `Q(0, Y)`, as a polynomial in the next coefficient. -/
-def initialCoefficientPolynomial {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] [DecidableEq F]
-    (Q : CBivariate F) : CPolynomial F :=
-  (List.range Q.val.size).foldl
-    (fun out y ↦ out + CPolynomial.monomial y (CBivariate.coeff Q 0 y))
-    0
 
 /-- The linear coefficient of the next recursive root equation after depth zero. -/
 def nextCoefficientSlope {F : Type*} [Field F]
@@ -65,43 +57,13 @@ def nextCoefficientSlope {F : Type*} [Field F]
 
 /-- Polynomial equation for the next coefficient in the prefix recursion. -/
 def nextCoefficientPolynomial {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] [DecidableEq F]
+    [Field F] [BEq F] [LawfulBEq F] [DecidableEq F]
     (Q : CBivariate F) (pref : CPolynomial F) (depth : Nat) : CPolynomial F :=
   if depth = 0 then
     initialCoefficientPolynomial Q
   else
     CPolynomial.ofArray
       #[CBivariate.composeYCoeff Q pref depth, nextCoefficientSlope Q pref]
-
-/-- Executable final check for the GS root condition. -/
-def isRootYDegreeLtBool {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F]
-    (Q : CBivariate F) (k : Nat) (p : CPolynomial F) : Bool :=
-  degreeLtBool p k && CBivariate.composeYHorner Q p == 0
-
-/-- Filter a candidate family to exact bounded-degree roots. -/
-def rootsYDegreeLtFromCandidates {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F]
-    (candidates : Array (CPolynomial F)) (Q : CBivariate F) (k : Nat) :
-    Array (CPolynomial F) :=
-  candidates.filter fun p ↦ isRootYDegreeLtBool Q k p
-
-/-- Extend one candidate prefix by one coefficient at `X^depth`. -/
-def extendPrefix {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [DecidableEq F]
-    (pref : CPolynomial F) (depth : Nat) (coeff : F) : CPolynomial F :=
-  pref + CPolynomial.monomial depth coeff
-
-/-- Query a field-root backend only for nonzero equations.
-
-A zero equation imposes no restriction on the next coefficient. Enumerating all
-field elements is unsuitable for large fields, so the residual-transform RR
-backend uses `X`-adic residual normalization to avoid zero equations for nonzero
-bivariate inputs.
--/
-def rootsInFieldForNonzeroEquation {F : Type*} [Field F] [BEq F] [LawfulBEq F]
-    (fieldRoots : FieldRootContext F) (p : CPolynomial F) : Array F :=
-  if p == 0 then #[] else fieldRoots.rootsInField p
 
 /-- Ordered recursive candidate extensions using a field-root backend.
 
@@ -110,7 +72,7 @@ residual-transform Roth-Ruckenstein backend uses residual normalization before
 field-root queries.
 -/
 def rootPrefixExtensionsWithFieldRootContext {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] [DecidableEq F]
+    [Field F] [BEq F] [LawfulBEq F] [DecidableEq F]
     (fieldRoots : FieldRootContext F) (Q : CBivariate F) (depth : Nat)
     (prefixes : Array (CPolynomial F)) : List (CPolynomial F) :=
   prefixes.toList.flatMap fun pref ↦
@@ -121,7 +83,7 @@ def rootPrefixExtensionsWithFieldRootContext {F : Type*}
 /-- Candidate prefixes after choosing coefficients through depth `< k` in the
 direct coefficient-equation recursion. Zero equations are not expanded. -/
 def rothRuckensteinRootPrefixes {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] [DecidableEq F]
+    [Field F] [BEq F] [LawfulBEq F] [DecidableEq F]
     (fieldRoots : FieldRootContext F) (Q : CBivariate F) : Nat → Array (CPolynomial F)
   | 0 => #[0]
   | depth + 1 =>
@@ -130,7 +92,7 @@ def rothRuckensteinRootPrefixes {F : Type*}
 
 /-- Residual-transform Roth-Ruckenstein prefixes with explicit recursion fuel. -/
 def transformedRothRuckensteinRootPrefixesWithFuel {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] [DecidableEq F]
+    [Field F] [BEq F] [LawfulBEq F] [DecidableEq F]
     (fieldRoots : FieldRootContext F) :
     Nat → CBivariate F → Nat → CPolynomial F → Array (CPolynomial F)
   | 0, _Q, _depth, pref => #[pref]
@@ -150,14 +112,14 @@ def transformedRothRuckensteinRootPrefixesWithFuel {F : Type*}
 
 /-- Candidate prefixes from the residual-transform recursion through precision `X^k`. -/
 def transformedRothRuckensteinRootPrefixes {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] [DecidableEq F]
+    [Field F] [BEq F] [LawfulBEq F] [DecidableEq F]
     (fieldRoots : FieldRootContext F) (Q : CBivariate F) (k : Nat) :
     Array (CPolynomial F) :=
   transformedRothRuckensteinRootPrefixesWithFuel fieldRoots k Q 0 default
 
 /-- Residual-transform Roth-Ruckenstein bounded-degree roots. -/
 def transformedRothRuckensteinRootsYDegreeLt {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] [DecidableEq F]
+    [Field F] [BEq F] [LawfulBEq F] [DecidableEq F]
     (fieldRoots : FieldRootContext F) (Q : CBivariate F) (k : Nat) :
     Array (CPolynomial F) :=
   (transformedRothRuckensteinRootPrefixes fieldRoots Q k).filter fun p ↦
@@ -170,7 +132,7 @@ The public backend uses the residual-transform recursion, which strips common
 excluded from the field-root dependency for nonzero bivariate inputs.
 -/
 def rothRuckensteinRootsYDegreeLt {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] [DecidableEq F]
+    [Field F] [BEq F] [LawfulBEq F] [DecidableEq F]
     (fieldRoots : FieldRootContext F) (Q : CBivariate F) (k : Nat) :
     Array (CPolynomial F) :=
   transformedRothRuckensteinRootsYDegreeLt fieldRoots Q k

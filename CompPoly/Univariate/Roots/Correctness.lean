@@ -115,7 +115,7 @@ private theorem Raw.eval_mul {F : Type*} [Field F] [BEq F] [LawfulBEq F]
     Polynomial.eval_mul, CPolynomial.Raw.eval_toPoly_eq_eval,
     CPolynomial.Raw.eval_toPoly_eq_eval]
 
-private theorem Raw.eval_C {F : Type*} [Field F] [BEq F] [LawfulBEq F] (a c : F) :
+private theorem Raw.eval_C {F : Type*} [Field F] (a c : F) :
     (CPolynomial.Raw.C c).eval a = c := by
   rw [← CPolynomial.Raw.eval_toPoly_eq_eval]
   simp [CPolynomial.Raw.toPoly_C]
@@ -148,9 +148,10 @@ private theorem Raw.eval_mod_eq_zero_of_left_right {F : Type*}
     rw [Raw.eval_mul, Raw.eval_C, hq]
     simp
   have hmod := CPolynomial.Raw.eval_modByMonic_eq_self_of_eval_eq_zero
-    p
+    (CPolynomial.Raw.C (q.leadingCoeff)⁻¹ • p)
     (CPolynomial.Raw.C (q.leadingCoeff)⁻¹ * q) hqscaled
-  rw [hmod, hp]
+  rw [hmod, Raw.eval_C_smul, hp]
+  simp
 
 private theorem Raw.eval_gcdMonicWithFuel_eq_zero_of_left_right {F : Type*}
     [Field F] [BEq F] [LawfulBEq F] {a : F} :
@@ -192,7 +193,8 @@ theorem monicNormalize_root_iff {F : Type*} [Field F] [BEq F] [LawfulBEq F]
     intro h
     apply hp
     apply CPolynomial.ext
-    simpa using h
+    change p.val = (#[] : CPolynomial.Raw F)
+    exact h
   have hsize : 0 < p.val.size := by
     cases hs : p.val.size with
     | zero =>
@@ -237,6 +239,15 @@ theorem monicNormalize_root_of_root {F : Type*} [Field F] [BEq F] [LawfulBEq F]
   rw [CPolynomial.Raw.eval_trim_eq_eval]
   exact Raw.eval_monicNormalize_eq_zero_of_eval_eq_zero hp
 
+/-- The normalized polynomial divides the original polynomial. -/
+theorem toPoly_monicNormalize_dvd_self {F : Type*}
+    [Field F] [BEq F] [LawfulBEq F]
+    (p : CPolynomial F) :
+    (CPolynomial.monicNormalize p).toPoly ∣ p.toPoly := by
+  letI : DecidableEq F := instDecidableEqOfLawfulBEq
+  rw [CPolynomial.monicNormalize_toPoly_eq_normalize]
+  exact (normalize_associated p.toPoly).dvd
+
 /-- The monic gcd contains every common root. -/
 theorem gcdMonic_root_of_left_right {F : Type*} [Field F] [BEq F] [LawfulBEq F]
     {p q : CPolynomial F} {a : F}
@@ -247,6 +258,26 @@ theorem gcdMonic_root_of_left_right {F : Type*} [Field F] [BEq F] [LawfulBEq F]
   rw [CPolynomial.Raw.eval_trim_eq_eval]
   unfold CPolynomial.Raw.gcdMonic
   exact Raw.eval_gcdMonicWithFuel_eq_zero_of_left_right _ p.val q.val hp hq
+
+/-- The monic gcd divides its left operand. -/
+theorem toPoly_gcdMonic_dvd_left {F : Type*}
+    [Field F] [BEq F] [LawfulBEq F]
+    (p q : CPolynomial F) :
+    (CPolynomial.gcdMonic p q).toPoly ∣ p.toPoly := by
+  letI : DecidableEq F := instDecidableEqOfLawfulBEq
+  rw [CPolynomial.gcdMonic_toPoly_eq_normalize_gcd]
+  exact (normalize_associated (EuclideanDomain.gcd p.toPoly q.toPoly)).dvd.trans
+    (EuclideanDomain.gcd_dvd_left p.toPoly q.toPoly)
+
+/-- The monic gcd divides its right operand. -/
+theorem toPoly_gcdMonic_dvd_right {F : Type*}
+    [Field F] [BEq F] [LawfulBEq F]
+    (p q : CPolynomial F) :
+    (CPolynomial.gcdMonic p q).toPoly ∣ q.toPoly := by
+  letI : DecidableEq F := instDecidableEqOfLawfulBEq
+  rw [CPolynomial.gcdMonic_toPoly_eq_normalize_gcd]
+  exact (normalize_associated (EuclideanDomain.gcd p.toPoly q.toPoly)).dvd.trans
+    (EuclideanDomain.gcd_dvd_right p.toPoly q.toPoly)
 
 /-- The monic gcd vanishes exactly at common roots. -/
 theorem gcdMonic_root_iff_left_right {F : Type*}
@@ -277,6 +308,44 @@ theorem gcdMonic_root_iff_left_right {F : Type*}
     have hiff := Polynomial.isRoot_gcd_iff_isRoot_left_right
       (f := p.toPoly) (g := q.toPoly) (α := a)
     simpa [Polynomial.IsRoot, CPolynomial.eval_toPoly] using hiff
+
+/-- A root of a dividend is a root of the exact quotient when the divisor does
+not vanish at that point. -/
+theorem eval_div_eq_zero_of_dvd_of_root_of_ne_root {F : Type*}
+    [Field F] [BEq F] [LawfulBEq F]
+    {p q : CPolynomial F} {a : F}
+    (hdiv : q.toPoly ∣ p.toPoly)
+    (hp : CPolynomial.eval a p = 0)
+    (hq : CPolynomial.eval a q ≠ 0) :
+    CPolynomial.eval a (p / q) = 0 := by
+  rcases hdiv with ⟨r, hr⟩
+  have hqPoly : q.toPoly ≠ 0 := by
+    intro hqPoly
+    apply hq
+    rw [CPolynomial.eval_toPoly, hqPoly, Polynomial.eval_zero]
+  rw [CPolynomial.eval_toPoly]
+  change Polynomial.eval a (CPolynomial.div p q).toPoly = 0
+  rw [CPolynomial.div_toPoly_eq_div]
+  have hdivPoly : p.toPoly / q.toPoly = r := by
+    exact (EuclideanDomain.eq_div_of_mul_eq_right hqPoly hr.symm).symm
+  rw [hdivPoly]
+  have hpEval : Polynomial.eval a p.toPoly = 0 := by
+    simpa [CPolynomial.eval_toPoly] using hp
+  rw [hr, Polynomial.eval_mul] at hpEval
+  exact (mul_eq_zero.mp hpEval).resolve_left (by
+    simpa [CPolynomial.eval_toPoly] using hq)
+
+/-- Monic normalization of an exact quotient preserves the quotient root from
+`eval_div_eq_zero_of_dvd_of_root_of_ne_root`. -/
+theorem monicNormalize_div_root_of_dvd_of_root_of_ne_root {F : Type*}
+    [Field F] [BEq F] [LawfulBEq F]
+    {p q : CPolynomial F} {a : F}
+    (hdiv : q.toPoly ∣ p.toPoly)
+    (hp : CPolynomial.eval a p = 0)
+    (hq : CPolynomial.eval a q ≠ 0) :
+    CPolynomial.eval a (CPolynomial.monicNormalize (p / q)) = 0 :=
+  monicNormalize_root_of_root
+    (eval_div_eq_zero_of_dvd_of_root_of_ne_root hdiv hp hq)
 
 /-- The normalized extended gcd contains every common root. -/
 theorem normXgcd_root_of_left_right {F : Type*} [Field F] [BEq F] [LawfulBEq F]
@@ -324,8 +393,7 @@ theorem linearRootOfFactor?_sound {F : Type*} [Field F] [BEq F] [LawfulBEq F]
       | cons y xs =>
           cases xs with
           | nil =>
-              simp [linearRootOfFactor?, CPolynomial.eval,
-                CPolynomial.Raw.eval, CPolynomial.Raw.eval₂] at h ⊢
+              simp [linearRootOfFactor?, CPolynomial.eval] at h ⊢
               rcases h with ⟨hy, ha⟩
               rw [← ha]
               field_simp [hy]
@@ -371,7 +439,6 @@ private theorem linearRootOfFactor?_eq_some_of_candidate {F : Type*}
   have hcond : factor.val.size ≤ 2 ∧ factor.coeff 1 ≠ 0 := h.1
   rw [if_pos]
   · congr
-    change -(factor.coeff 0) / factor.coeff 1 = a
     apply (div_eq_iff hcond.2).2
     rw [neg_eq_iff_add_eq_zero]
     rw [_root_.mul_comm a (factor.coeff 1)]
@@ -465,12 +532,12 @@ private theorem raw_eval_powModBinaryAux_naive {F : Type*}
               omega
             simp [hpow]
 
-private theorem raw_eval_one {F : Type*} [Field F] [BEq F] [LawfulBEq F] (a : F) :
+private theorem raw_eval_one {F : Type*} [Field F] (a : F) :
     (1 : CPolynomial.Raw F).eval a = 1 := by
   rw [← CPolynomial.Raw.eval_toPoly_eq_eval]
   simp
 
-private theorem raw_eval_X {F : Type*} [Field F] [BEq F] [LawfulBEq F] (a : F) :
+private theorem raw_eval_X {F : Type*} [Field F] (a : F) :
     (CPolynomial.Raw.X : CPolynomial.Raw F).eval a = a := by
   rw [← CPolynomial.Raw.eval_toPoly_eq_eval]
   simp [CPolynomial.Raw.toPoly_X]
@@ -663,6 +730,34 @@ private theorem raw_eval_powModWith_X {F : Type*}
     rw [hmodBy, raw_eval_one, raw_eval_X]
     simp
 
+/-- Raw modular exponentiation evaluates as ordinary exponentiation at roots of
+the modulus. -/
+theorem raw_eval_powModWith_eq_pow {F : Type*}
+    [Field F] [BEq F] [LawfulBEq F]
+    (M : CPolynomial.Raw.MulContext F) (D : CPolynomial.Raw.ModContext F)
+    {modulus base : CPolynomial.Raw F} {a : F}
+    (hmod : modulus.eval a = 0) (q : Nat) :
+    (CPolynomial.Raw.powModWith M D modulus base q).eval a =
+      base.eval a ^ q := by
+  unfold CPolynomial.Raw.powModWith
+  by_cases hzero : modulus.trim = (#[] : CPolynomial.Raw F)
+  · simp [hzero]
+    rw [raw_eval_powModBinaryAuxWith M D hmod, raw_eval_one]
+    simp
+  · simp [hzero]
+    have hroot : (CPolynomial.Raw.monicNormalize modulus).eval a = 0 :=
+      CPolynomial.Raw.eval_monicNormalize_eq_zero_of_eval_eq_zero hmod
+    have hmodBy := CPolynomial.Raw.eval_modByMonic_eq_self_of_eval_eq_zero
+      (1 : CPolynomial.Raw F) (CPolynomial.Raw.monicNormalize modulus) hroot
+    rw [raw_eval_powModBinaryAuxWith M D hmod]
+    have hOneTrim : (1 : CPolynomial.Raw F).trim = 1 := by
+      change CPolynomial.Raw.trim (#[] |>.push (1 : F)) = (#[] |>.push (1 : F))
+      apply CPolynomial.Raw.Trim.push_trim
+      simp
+    rw [D.modByMonic_eq_modByMonic _ _ hOneTrim (raw_monicNormalize_trim modulus)]
+    rw [hmodBy, raw_eval_one]
+    simp
+
 private theorem raw_eval_xModWith {F : Type*}
     [Field F] [BEq F] [LawfulBEq F]
     (D : CPolynomial.Raw.ModContext F)
@@ -710,7 +805,8 @@ theorem finiteFieldRootProductWith_complete {F : Type*}
   by_cases hpempty : p.val = (#[] : CPolynomial.Raw F)
   · have hp0 : p = 0 := by
       apply CPolynomial.ext
-      simpa using hpempty
+      change p.val = (#[] : CPolynomial.Raw F)
+      exact hpempty
     exact (hp hp0).elim
   · simp [hpempty, CPolynomial.trim_eq]
     have hmonicRoot : (CPolynomial.Raw.monicNormalize p.val).eval a = 0 :=
@@ -739,7 +835,8 @@ theorem finiteFieldRootProduct_complete {F : Type*}
   by_cases hpempty : p.val = (#[] : CPolynomial.Raw F)
   · have hp0 : p = 0 := by
       apply CPolynomial.ext
-      simpa using hpempty
+      change p.val = (#[] : CPolynomial.Raw F)
+      exact hpempty
     exact (hp hp0).elim
   · simp [hpempty, CPolynomial.trim_eq]
     have hmonicRoot : (CPolynomial.Raw.monicNormalize p.val).eval a = 0 :=
@@ -800,7 +897,7 @@ private theorem eq_zero_of_size_le_one_root {F : Type*}
   | cons x xs =>
       cases xs with
       | nil =>
-          simp [CPolynomial.eval, CPolynomial.Raw.eval, CPolynomial.Raw.eval₂] at hroot
+          simp [CPolynomial.eval] at hroot
           have hxne := hcanon (by simp)
           simp [Array.getLast] at hxne
           exact (hxne hroot).elim
@@ -825,7 +922,6 @@ private theorem linear_candidate_self_of_size_two_root {F : Type*}
           cases xs with
           | nil =>
               simp [IsLinearRootFactorCandidate, IsLinearFactor, CPolynomial.eval,
-                CPolynomial.Raw.eval, CPolynomial.Raw.eval₂,
                 CPolynomial.coeff, CPolynomial.Raw.coeff] at hroot hcoeff ⊢
               exact ⟨hcoeff, hroot⟩
           | cons _ _ =>
@@ -853,6 +949,16 @@ theorem linearFactor_isLinearFactor {F : Type*} [Field F] [BEq F] [LawfulBEq F]
         exact max_le (le_trans hC (by omega)) hX
   · rw [CPolynomial.linearFactor, CPolynomial.coeff_add, CPolynomial.coeff_C]
     simp [CPolynomial.X, CPolynomial.Raw.X, CPolynomial.coeff, CPolynomial.Raw.coeff]
+
+/-- The represented-linear recognizer accepts every explicit `X - a` factor. -/
+theorem linearFactor_isRepresentedLinearFactor {F : Type*}
+    [Field F] [BEq F] [LawfulBEq F]
+    (a : F) : isRepresentedLinearFactor (CPolynomial.linearFactor a) = true := by
+  unfold isRepresentedLinearFactor
+  have hlin := linearFactor_isLinearFactor a
+  have hcoeff : ¬(CPolynomial.linearFactor a).val[1]?.getD 0 = 0 := by
+    simpa [CPolynomial.coeff, CPolynomial.Raw.coeff] using hlin.2
+  simp [hlin.1, hcoeff, CPolynomial.coeff, CPolynomial.Raw.coeff]
 
 /-- The explicit `X - a` factor represents the root `a`. -/
 theorem linearFactor_isRootFactorCandidate {F : Type*}
@@ -888,8 +994,7 @@ theorem representedLinearFactor_candidate_of_root {F : Type*}
           cases xs with
           | nil =>
               simp [isRepresentedLinearFactor, IsLinearRootFactorCandidate, IsLinearFactor,
-                CPolynomial.eval, CPolynomial.Raw.eval, CPolynomial.Raw.eval₂,
-                CPolynomial.coeff, CPolynomial.Raw.coeff] at hroot hlin ⊢
+                CPolynomial.eval, CPolynomial.coeff, CPolynomial.Raw.coeff] at hroot hlin ⊢
               exact ⟨hlin, hroot⟩
           | cons _ _ =>
               simp [isRepresentedLinearFactor] at hlin

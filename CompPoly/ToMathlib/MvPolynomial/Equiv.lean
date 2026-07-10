@@ -85,8 +85,9 @@ theorem finSuccEquivNth_coeff_coeff (m : Fin n →₀ ℕ) (f : MvPolynomial (Fi
       ← map_prod, ← RingHom.map_pow]
     rw [← mul_boole, mul_comm (Polynomial.X ^ u p), Polynomial.coeff_C_mul_X_pow]; congr 1
     obtain rfl | hjmi := eq_or_ne u (m.insertNth p i)
-    · simpa only [insertNth_apply_same, if_pos rfl, insertNth_apply_succAbove, monomial_eq, C_1,
-        one_mul, prod_pow] using coeff_monomial m m (1 : R)
+    · simpa only [insertNth_apply_same, if_pos rfl, if_true,
+        insertNth_apply_succAbove, monomial_eq, C_1, one_mul, prod_pow] using
+        coeff_monomial m m (1 : R)
     · simp only [hjmi, if_false]
       obtain hij | rfl := ne_or_eq i (u p)
       · simp only [hij, if_false, coeff_zero]
@@ -112,11 +113,11 @@ theorem eval_eq_eval_mv_eval_finSuccEquivNth (s : Fin n → R) (y : R)
   congr 2
   apply MvPolynomial.algHom_ext
   simp only [Fin.forall_iff_succAbove p, aeval_X, Fin.insertNth_apply_same, Polynomial.mapAlgHom,
-    AlgHom.toRingHom_eq_coe, coe_aeval_eq_eval, AlgEquiv.toAlgHom_eq_coe, AlgHom.coe_comp,
-    Polynomial.coe_aeval_eq_eval, AlgHom.coe_mk, coe_mapRingHom, AlgHom.coe_coe, comp_apply,
-    finSuccEquivNth_apply, eval₂Hom_X', Polynomial.map_X, Polynomial.eval_X,
-    Fin.insertNth_apply_succAbove, Polynomial.map_C, eval_X, Polynomial.eval_C, implies_true,
-    and_self]
+    AlgHom.toRingHom_eq_coe, coe_aeval_eq_eval, AlgHom.coe_comp,
+    Polynomial.coe_aeval_eq_eval, AlgHom.coe_mk, coe_mapRingHom, comp_apply,
+    AlgEquiv.toAlgHom_apply, finSuccEquivNth_apply, eval₂Hom_X', Polynomial.map_X,
+    Polynomial.eval_X, Fin.insertNth_apply_succAbove, Polynomial.map_C, eval_X,
+    Polynomial.eval_C, implies_true, and_self]
 
 /-- A monomial index `m` is in the support of the `i`-th coefficient of `finSuccEquivNth R p f` if
 and only if `m.insertNth p i` is in the support of `f`. -/
@@ -155,7 +156,7 @@ theorem support_finSuccEquivNth (f : MvPolynomial (Fin (n + 1)) R) :
   · rintro ⟨m, hm⟩
     refine ⟨m.insertNth p i, ?_, insertNth_apply_same _ _ _⟩
     rw [← support_coeff_finSuccEquivNth]
-    simpa using hm
+    simpa [mem_support_iff, coeff] using hm
   · rintro ⟨m, h, rfl⟩
     refine ⟨m.removeNth p, ?_⟩
     rwa [← coeff, zero_apply, ← mem_support_iff, support_coeff_finSuccEquivNth,

@@ -7,7 +7,6 @@ import Mathlib.Algebra.Polynomial.Div
 import Mathlib.Algebra.Polynomial.FieldDivision
 import Mathlib.Algebra.Polynomial.Reverse
 import Mathlib.Tactic.Ring
-import CompPoly.Univariate.Division
 import CompPoly.Univariate.ToPoly.Impl
 import CompPoly.Univariate.ToPoly.Degree
 import CompPoly.ToMathlib.Polynomial.Div
@@ -34,10 +33,12 @@ variable [Field R] [BEq R] [LawfulBEq R]
 private def lowEq (k : Nat) (p q : R[X]) : Prop :=
   ∀ i, i < k → p.coeff i = q.coeff i
 
+omit [BEq R] [LawfulBEq R] in
 private lemma toPoly_truncate_coeff (k : Nat) (p : Raw R) (i : Nat) :
     (truncate k p).toPoly.coeff i = if i < k then p.toPoly.coeff i else 0 := by
   rw [Raw.coeff_toPoly, Raw.truncate_coeff, Raw.coeff_toPoly]
 
+omit [BEq R] [LawfulBEq R] in
 private lemma toPoly_reverse_coeff (n : Nat) (p : Raw R) (i : Nat) :
     (reverse n p).toPoly.coeff i =
       if i < n then p.toPoly.coeff (n - 1 - i) else 0 := by
@@ -52,6 +53,7 @@ private lemma toPoly_mulLow_coeff (M : MulLowContext R) (k : Nat)
   · simpa [hi, Raw.coeff_toPoly] using (Raw.toPoly_mul_coeff p q i)
   · simp [hi]
 
+omit [BEq R] [LawfulBEq R] in
 private lemma toPoly_truncate_lowEq (k : Nat) (p : Raw R) :
     lowEq k (truncate k p).toPoly p.toPoly := by
   intro i hi
@@ -204,6 +206,7 @@ private lemma min_mul_two_pow_le_min_min_mul (k n fuel : Nat) :
     have hle : k ≤ k * 2 ^ fuel := Nat.le_mul_of_pos_right (n := k) hp
     simp [Nat.min_eq_left hle]
 
+omit [BEq R] [LawfulBEq R] in
 private lemma inverseModX_base_lowEq (p : Raw R)
     (h0 : p.toPoly.coeff 0 ≠ 0) :
     lowEq 1 (p.toPoly * (Raw.C (p.coeff 0)⁻¹).toPoly) 1 := by
@@ -212,8 +215,7 @@ private lemma inverseModX_base_lowEq (p : Raw R)
   subst i
   rw [Raw.toPoly_C]
   rw [Polynomial.coeff_mul]
-  rw [show p.coeff 0 = p.toPoly.coeff 0 by rw [← Raw.coeff_toPoly]]
-  simp at h0 ⊢
+  simp [Raw.coeff_toPoly] at h0 ⊢
   exact mul_inv_cancel₀ h0
 
 private lemma inverseModX_go_lowEq (M : MulLowContext R) (k : Nat) (p : Raw R) :
@@ -282,6 +284,7 @@ private lemma inverseModX_lowEq (M : MulLowContext R) (k : Nat)
     have hmin : Nat.min k (2 ^ (k + 1)) = k := Nat.min_eq_left hkpow
     simpa [hmin] using hgo
 
+omit [BEq R] [LawfulBEq R] in
 private lemma toPoly_reverse_eq_reflect (n : Nat) (p : Raw R)
     (hdeg : p.toPoly.natDegree < n) :
     (reverse n p).toPoly = Polynomial.reflect (n - 1) p.toPoly := by
@@ -295,6 +298,7 @@ private lemma toPoly_reverse_eq_reflect (n : Nat) (p : Raw R)
     exact (Polynomial.coeff_eq_zero_of_natDegree_lt
       (lt_of_lt_of_le hdeg (Nat.le_of_not_lt hi))).symm
 
+omit [BEq R] [LawfulBEq R] in
 private lemma toPoly_reverse_natDegree_le (k : Nat) (p : Raw R) :
     (reverse k p).toPoly.natDegree ≤ k - 1 := by
   rw [Polynomial.natDegree_le_iff_coeff_eq_zero]
@@ -324,7 +328,7 @@ private lemma raw_toPoly_natDegree_lt_size_of_trim_eq (p : Raw R)
   simpa [htrim] using Raw.toPoly_natDegree_lt_trim_size_of_pos (R := R) p (by
     simpa [htrim] using hpos)
 
-omit [Nontrivial R] in
+omit [BEq R] [LawfulBEq R] [Nontrivial R] in
 private lemma toImpl_size_le_of_degree_lt (f : R[X]) (n : Nat)
     (hdeg : f.degree < (n : WithBot Nat)) : f.toImpl.size ≤ n := by
   rcases Raw.toImpl_elim f with ⟨_hzero, himpl⟩ | ⟨hnz, himpl⟩
@@ -392,7 +396,7 @@ private lemma div_step_size_lt (p q : Raw R)
   change p'.size < p.size
   omega
 
-omit [Nontrivial R] in
+omit [BEq R] [LawfulBEq R] [Nontrivial R] in
 private lemma raw_toPoly_degree_lt_of_size_lt (p q : Raw R)
     (hsize : p.size < q.size)
     (hqdegree : q.toPoly.degree = ((q.size - 1 : Nat) : WithBot Nat)) :
@@ -494,8 +498,7 @@ CPolynomial (CPolynomial R)`, giving Euclidean division by any monic divisor in
 the outer variable. -/
 theorem modByMonic_add_mul_divByMonic (p q : CPolynomial R) (hmonic : q.monic) :
     p.modByMonic q + q * p.divByMonic q = p := by
-  have hpoly :
-      (p.modByMonic q + q * p.divByMonic q).toPoly = p.toPoly := by
+  have hpoly : (p.modByMonic q + q * p.divByMonic q).toPoly = p.toPoly := by
     rw [toPoly_add, toPoly_mul, divByMonic_toPoly_eq_divByMonic p q hmonic,
       modByMonic_toPoly_eq_modByMonic p q hmonic]
     exact Polynomial.modByMonic_add_div p.toPoly q.toPoly
@@ -527,10 +530,10 @@ theorem div_toPoly_eq_divByMonic (p q : CPolynomial R) (hq : q ≠ 0) :
 /-- Equality between CompPoly's `mod` and Mathlib's `modByMonic` -/
 theorem mod_toPoly_eq_modByMonic (p q : CPolynomial R) (hq : q ≠ 0) :
     (p.mod q).toPoly =
-      p.toPoly %ₘ (q.leadingCoeff⁻¹ • q.toPoly) := by
+      q.leadingCoeff⁻¹ • p.toPoly %ₘ (q.leadingCoeff⁻¹ • q.toPoly) := by
   rw [mod_eq_modByMonic]
   rw [modByMonic_toPoly_eq_modByMonic _ _ (leadingCoeff_inv_smul_monic _ hq)]
-  rw [toPoly_smul]
+  rw [toPoly_smul, toPoly_smul]
 
 /-- CompPoly's `div` is correct w.r.t. Mathlib's `div`. -/
 theorem div_toPoly_eq_div (p q : CPolynomial R) :
@@ -540,12 +543,28 @@ theorem div_toPoly_eq_div (p q : CPolynomial R) :
   rw [←Polynomial.smul_eq_C_mul, ←Polynomial.smul_divByMonic]
   rw [←Polynomial.smul_eq_C_mul, div_toPoly_eq_divByMonic p q hq]
 
-/-- CompPoly's `mod` is correct w.r.t. Mathlib's `mod`. -/
+/-- CompPoly's `mod` is Mathlib's `%` scaled by `q.leadingCoeff⁻¹`. -/
 theorem mod_toPoly_eq_smul_mod (p q : CPolynomial R) :
-    q ≠ 0 → (p.mod q).toPoly = p.toPoly % q.toPoly := by
-  intro hq
+    (p.mod q).toPoly = q.leadingCoeff⁻¹ • (p.toPoly % q.toPoly) := by
+  by_cases hq : q = 0
+  · simp [hq, toPoly_zero, show (0 : CPolynomial R).leadingCoeff = 0 from rfl]
   rw [Polynomial.mod_def, ←leadingCoeff_toPoly, _root_.mul_comm q.toPoly,
-    ← Polynomial.smul_eq_C_mul, mod_toPoly_eq_modByMonic p q hq]
+    ←Polynomial.smul_modByMonic, ← Polynomial.smul_eq_C_mul,
+    mod_toPoly_eq_modByMonic p q hq]
+
+/-- Exact-division bridge: `G.toPoly` factors as `f.toPoly * V.toPoly` iff the computable
+`mod` vanishes and the computable division recovers `f`. -/
+theorem exactDiv_toPoly_iff (G V f : CPolynomial R) (hV : V.toPoly ≠ 0) :
+    G.toPoly = f.toPoly * V.toPoly ↔ G.mod V = 0 ∧ (G / V).toPoly = f.toPoly := by
+  have hdivP : (G / V).toPoly = G.toPoly / V.toPoly := div_toPoly_eq_div _ _
+  have hmod : G.mod V = 0 ↔ G.toPoly % V.toPoly = 0 := by
+    rw [← toPoly_eq_zero_iff, mod_toPoly_eq_smul_mod, smul_eq_zero_iff_right
+      (inv_ne_zero (leadingCoeff_ne_zero ((toPoly_eq_zero_iff V).not.mp hV)))]
+  refine ⟨fun hGV => ?_, fun ⟨hmod0, hdiv⟩ => ?_⟩
+  · exact ⟨hmod.mpr (EuclideanDomain.mod_eq_zero.mpr (Dvd.intro_left _ hGV.symm)),
+      by rw [hdivP, hGV, mul_div_cancel_right₀ _ hV]⟩
+  · rw [← hdiv, hdivP, _root_.mul_comm,
+      EuclideanDomain.mul_div_cancel' hV (EuclideanDomain.mod_eq_zero.mp (hmod.mp hmod0))]
 
 private theorem reversal_remainder_toPoly_eq_modByMonic
     (M : Raw.MulLowContext R) (p q : CPolynomial R)
@@ -773,7 +792,7 @@ theorem modByMonicByReversal_eq_modByMonic
         simpa [rem] using reversal_remainder_toPoly_eq_modByMonic M p q hmonic hsize
       have h_raw_math :
           ((p.val : Raw R).modByMonic q.val).toPoly = p.toPoly %ₘ q.toPoly :=
-        (raw_divModByMonicAux_toPoly_eq p q ((monic_toPoly_iff q).mp hmonic)).2
+        modByMonic_toPoly_eq_modByMonic p q hmonic
       exact h_remMath.trans h_raw_math.symm
   · apply CPolynomial.ext
     have hptrim : (p.val : Raw R).trim = p.val := Trim.trim_eq_of_isCanonical p.property

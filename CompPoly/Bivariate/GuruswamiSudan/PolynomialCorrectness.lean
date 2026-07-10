@@ -21,13 +21,6 @@ namespace CompPoly
 
 namespace CPolynomial
 
-/-- Coefficients past the stored canonical array are zero. -/
-theorem coeff_eq_zero_of_size_le {R : Type*} [Zero R] (p : CPolynomial R)
-    {i : Nat} (hi : p.val.size ≤ i) : p.coeff i = 0 := by
-  unfold CPolynomial.coeff CPolynomial.Raw.coeff
-  rw [Array.getD_eq_getD_getElem?, Array.getElem?_eq_none hi]
-  rfl
-
 /-- The natural degree of a nonzero computable polynomial lies in its support. -/
 theorem natDegree_mem_support_of_nonzero {R : Type*} [Zero R] [BEq R] [LawfulBEq R]
     {p : CPolynomial R} (hp : p ≠ 0) : p.natDegree ∈ p.support := by
@@ -143,40 +136,6 @@ theorem coeff_eq_zero_of_y_size_le {R : Type*} [Zero R] (Q : CBivariate R)
   rw [CPolynomial.coeff_eq_zero_of_size_le Q hj]
   exact CPolynomial.coeff_zero i
 
-/-- Bivariate extensionality through all scalar coefficients. -/
-theorem eq_iff_coeff {R : Type*} [Zero R] [BEq R] [LawfulBEq R]
-    {P Q : CBivariate R} : P = Q ↔ ∀ i j, coeff P i j = coeff Q i j := by
-  constructor
-  · intro h i j
-    rw [h]
-  · intro h
-    apply (CPolynomial.eq_iff_coeff (p := P) (q := Q)).2
-    intro j
-    apply (CPolynomial.eq_iff_coeff (p := CPolynomial.coeff P j)
-      (q := CPolynomial.coeff Q j)).2
-    intro i
-    exact h i j
-
-/-- Coefficients of one bivariate monomial. -/
-theorem coeff_monomialXY {R : Type*}
-    [Semiring R] [BEq R] [LawfulBEq R] [Nontrivial R] [DecidableEq R]
-    (n m i j : Nat) (c : R) :
-    coeff (monomialXY n m c) i j = if i = n ∧ j = m then c else 0 := by
-  change CPolynomial.coeff
-      (CPolynomial.coeff (CPolynomial.monomial m (CPolynomial.monomial n c) :
-        CBivariate R) j) i = if i = n ∧ j = m then c else 0
-  have houter :
-      CPolynomial.coeff
-        (CPolynomial.monomial m (CPolynomial.monomial n c) : CBivariate R) j =
-      if j = m then CPolynomial.monomial n c else 0 := by
-    exact CPolynomial.coeff_monomial m j (CPolynomial.monomial n c)
-  rw [houter]
-  by_cases hj : j = m
-  · subst j
-    simpa [CPolynomial.coeff] using CPolynomial.coeff_monomial (R := R) n i c
-  · simp [hj]
-    simpa [CPolynomial.coeff] using CPolynomial.coeff_zero (R := R) i
-
 /-- Coefficients of a polynomial assembled from a monomial array are the folded
 sum of matching monomial coefficients. -/
 theorem ofMonomialCoeffs_coeff {R : Type*}
@@ -257,7 +216,12 @@ theorem array_getD_inj_of_nodup {α : Type*} [DecidableEq α] {xs : Array α}
   exact (List.getElem_inj hnodup).mp (by
     rw [Array.getD_eq_getD_getElem?, Array.getElem?_eq_getElem hi] at h
     rw [Array.getD_eq_getD_getElem?, Array.getElem?_eq_getElem hj] at h
-    simpa using h)
+    have hiList : i < xs.toList.length := by
+      simpa using hi
+    have hjList : j < xs.toList.length := by
+      simpa using hj
+    rw [Array.getElem_toList (xs := xs) hi, Array.getElem_toList (xs := xs) hj]
+    exact h)
 
 /-- For a nodup monomial array, the assembled polynomial recovers the matching
 coefficient at each listed monomial. -/
@@ -945,7 +909,7 @@ private theorem coeff_coeffwise_hasseDeriv_sum {F : Type*} [Field F]
 /-- The executable bivariate Hasse derivative matches the Mathlib-side
 coefficientwise inner Hasse derivative of the outer Hasse derivative. -/
 private theorem toPoly_hasseDerivative_eq_coeffwise_hasseDeriv_hasseDeriv {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] [DecidableEq F]
+    [Field F] [BEq F] [LawfulBEq F] [DecidableEq F]
     (Q : CBivariate F) (a b : Nat) :
     (CBivariate.hasseDerivative a b Q).toPoly =
       (Polynomial.hasseDeriv b Q.toPoly).sum fun j coeff ↦
@@ -962,7 +926,7 @@ private theorem toPoly_hasseDerivative_eq_coeffwise_hasseDeriv_hasseDeriv {F : T
 /-- Evaluating the univariate `X`-Hasse derivative of the evaluated `Y`-Hasse
 derivative matches the executable bivariate Hasse derivative. -/
 private theorem eval_hasseDeriv_eval_hasseDeriv_toPoly {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] [DecidableEq F]
+    [Field F] [BEq F] [LawfulBEq F] [DecidableEq F]
     (Q : CBivariate F) (x y : F) (a b : Nat) :
     Polynomial.eval x (Polynomial.hasseDeriv a
         (Polynomial.eval (Polynomial.C y) (Polynomial.hasseDeriv b Q.toPoly))) =
@@ -976,7 +940,7 @@ private theorem eval_hasseDeriv_eval_hasseDeriv_toPoly {F : Type*}
 /-- The coefficient of the generic Taylor shift is the direct Hasse derivative
 evaluation at the shift point. -/
 theorem coeff_shiftC_eq_hasseDerivativeEval {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] [DecidableEq F]
+    [Field F] [BEq F] [LawfulBEq F] [DecidableEq F]
     (Q : CBivariate F) (x y : F) (a b : Nat) :
     CBivariate.coeff (CBivariate.shiftC x y Q) a b =
       CBivariate.hasseDerivativeEval a b x y Q := by
@@ -994,7 +958,7 @@ theorem coeff_shiftC_eq_hasseDerivativeEval {F : Type*}
 /-- The generic multiplicity predicate agrees with the direct GS Hasse
 multiplicity predicate. -/
 theorem hasMultiplicity_iff_hasMultiplicityAtLeast {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] [DecidableEq F]
+    [Field F] [BEq F] [LawfulBEq F] [DecidableEq F]
     (Q : CBivariate F) (r : Nat) (x y : F) :
     CBivariate.hasMultiplicity Q r x y ↔
       CBivariate.HasMultiplicityAtLeast Q x y r := by
@@ -1010,7 +974,7 @@ theorem hasMultiplicity_iff_hasMultiplicityAtLeast {F : Type*}
 /-- The GS batch Hasse predicate agrees with the generic multiplicity
 predicate over every packed point. -/
 theorem satisfiesMultiplicityConstraints_iff_hasMultiplicity {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] [DecidableEq F]
+    [Field F] [BEq F] [LawfulBEq F] [DecidableEq F]
     (Q : CBivariate F) (points : Array (F × F)) (r : Nat) :
     CBivariate.SatisfiesMultiplicityConstraints Q points r ↔
       ∀ point, point ∈ points.toList →
@@ -1027,7 +991,7 @@ theorem satisfiesMultiplicityConstraints_iff_hasMultiplicity {F : Type*}
 /-- The executable GS point checker agrees with the generic multiplicity
 predicate. -/
 theorem multiplicityAtLeastBool_iff_hasMultiplicity {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] [DecidableEq F]
+    [Field F] [BEq F] [LawfulBEq F] [DecidableEq F]
     (Q : CBivariate F) (x y : F) (r : Nat) :
     CBivariate.multiplicityAtLeastBool Q x y r = true ↔
       CBivariate.hasMultiplicity Q r x y := by
@@ -1056,7 +1020,7 @@ theorem multiplicityAtLeastBool_iff_hasMultiplicity {F : Type*}
 /-- The executable GS batch checker agrees with the generic multiplicity
 predicate over every packed point. -/
 theorem satisfiesMultiplicityConstraintsBool_iff_hasMultiplicity {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] [DecidableEq F]
+    [Field F] [BEq F] [LawfulBEq F] [DecidableEq F]
     (Q : CBivariate F) (points : Array (F × F)) (r : Nat) :
     CBivariate.satisfiesMultiplicityConstraintsBool Q points r = true ↔
       ∀ point, point ∈ points.toList →
@@ -1080,7 +1044,7 @@ theorem satisfiesMultiplicityConstraintsBool_iff_hasMultiplicity {F : Type*}
 /-- The executable GS point checker agrees with the generic boolean
 checker. -/
 theorem multiplicityAtLeastBool_iff_checkMultiplicity {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] [DecidableEq F]
+    [Field F] [BEq F] [LawfulBEq F] [DecidableEq F]
     (Q : CBivariate F) (x y : F) (r : Nat) :
     CBivariate.multiplicityAtLeastBool Q x y r = true ↔
       CBivariate.checkMultiplicity Q r x y = true := by
@@ -1089,7 +1053,7 @@ theorem multiplicityAtLeastBool_iff_checkMultiplicity {F : Type*}
 /-- The executable GS batch checker agrees pointwise with the generic
 boolean checker over the packed point array. -/
 theorem satisfiesMultiplicityConstraintsBool_iff_checkMultiplicity {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] [DecidableEq F]
+    [Field F] [BEq F] [LawfulBEq F] [DecidableEq F]
     (Q : CBivariate F) (points : Array (F × F)) (r : Nat) :
     CBivariate.satisfiesMultiplicityConstraintsBool Q points r = true ↔
       ∀ point, point ∈ points.toList →

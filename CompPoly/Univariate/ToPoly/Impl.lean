@@ -4,7 +4,6 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao, Gregor Mitscha-Baude, Derek Sorensen
 -/
 import CompPoly.Univariate.ToPoly.Equiv
-import CompPoly.Univariate.Division
 import Mathlib.Algebra.Polynomial.Roots
 
 /-!
@@ -35,8 +34,9 @@ theorem monomial_toPoly [DecidableEq R] [LawfulBEq R] (n : ℕ) (c : R) :
 
 /-- CPolynomial.C is correct wrt the Mathlib spec. -/
 theorem C_toPoly [BEq R] [LawfulBEq R] (r : R) : (C r).toPoly = Polynomial.C r := by
-  change (Raw.C r).trim.toPoly = Polynomial.C r
-  rw [Raw.toPoly_trim, Raw.toPoly_C]
+  change ((Raw.C r).trim : Raw R).toPoly = Polynomial.C r
+  rw [Raw.toPoly_trim]
+  exact Raw.toPoly_C r
 
 /-- CPolynomial.X is correct wrt the Mathlib spec. -/
 theorem X_toPoly [BEq R] [LawfulBEq R] [Nontrivial R] :
@@ -47,9 +47,8 @@ theorem X_toPoly [BEq R] [LawfulBEq R] [Nontrivial R] :
 /-- CPolynomial.eval is correct wrt the Mathlib spec. -/
 theorem eval_toPoly [BEq R] [LawfulBEq R] (x : R) (p : CPolynomial R) :
     eval x p = p.toPoly.eval x := by
-  convert Raw.eval_toPoly_eq_eval x p.val
-  · rw [ Raw.eval_toPoly_eq_eval ]; rfl
-  · convert Raw.eval_toPoly_eq_eval x p.val
+  change Raw.eval x p.val = p.val.toPoly.eval x
+  exact (Raw.eval_toPoly_eq_eval x p.val).symm
 
 /-- Evaluation of a constant computable polynomial. -/
 theorem eval_C [BEq R] [LawfulBEq R] (a c : R) :
@@ -57,25 +56,25 @@ theorem eval_C [BEq R] [LawfulBEq R] (a c : R) :
   rw [CPolynomial.eval_toPoly, CPolynomial.C_toPoly, Polynomial.eval_C]
 
 /-- Raw.eval₂ is correct wrt the Mathlib spec. -/
-theorem Raw.eval₂_toPoly [BEq R] [LawfulBEq R] {S : Type*} [Semiring S]
+theorem Raw.eval₂_toPoly {S : Type*} [Semiring S]
     (f : R →+* S) (x : S) (p : CPolynomial.Raw R) :
     p.eval₂ f x = p.toPoly.eval₂ f x := by
-  unfold CompPoly.CPolynomial.Raw.toPoly
-  rw [CPolynomial.Raw.eval₂_eq_eval₂_naive, CPolynomial.Raw.eval₂_eq_eval₂_naive]
-  unfold CompPoly.CPolynomial.Raw.eval₂Naive
-  rw [← Array.foldl_hom (fun q : R[X] ↦ q.eval₂ f x)
-    (g₁ := fun acc (t : R × ℕ) ↦ acc + Polynomial.C t.1 * Polynomial.X ^ t.2)
-    (g₂ := fun acc (a, i) ↦ acc + f a * x ^ i)]
+  unfold CompPoly.CPolynomial.Raw.toPoly CompPoly.CPolynomial.Raw.eval₂
+  rw [← Array.foldl_hom (fun q : R[X] => q.eval₂ f x)
+    (g₁ := fun acc (t : R × ℕ) => acc + Polynomial.C t.1 * Polynomial.X ^ t.2)
+    (g₂ := fun acc (a, i) => acc + f a * x ^ i)]
   · simp
   · intro acc t
     rcases t with ⟨a, i⟩
     simp [Polynomial.eval₂_add, Polynomial.C_mul_X_pow_eq_monomial]
 
 /-- CPolynomial.eval₂ is correct wrt the Mathlib spec. -/
-theorem eval₂_toPoly [BEq R] [LawfulBEq R] {S : Type*} [Semiring S]
+theorem eval₂_toPoly {S : Type*} [Semiring S]
     (f : R →+* S) (x : S) (p : CPolynomial R) :
     eval₂ f x p = p.toPoly.eval₂ f x := by
-  exact Raw.eval₂_toPoly f x p.val
+  simpa [CompPoly.CPolynomial.eval₂, CompPoly.CPolynomial.toPoly, CompPoly.CPolynomial.Raw.eval₂]
+    using
+    (Raw.eval₂_toPoly (f := f) (x := x) (p := p.val))
 
 /-- CPolynomial.coeff is correct wrt the Mathlib spec. -/
 theorem coeff_toPoly [BEq R] [LawfulBEq R] (p : CPolynomial R) (i : ℕ) :
@@ -101,17 +100,10 @@ theorem divX_toPoly [BEq R] [LawfulBEq R] (p : CPolynomial R) :
 theorem support_toPoly [BEq R] [LawfulBEq R] (p : CPolynomial R) :
     p.support = p.toPoly.support := by
   ext i
-  by_cases hi : i < p.val.size
-  · simp [CPolynomial.support, Polynomial.mem_support_iff, hi, ← coeff_toPoly p i,
-      CPolynomial.coeff, Raw.coeff]
-  · have hcoeff : p.toPoly.coeff i = 0 := by
-      rw [← coeff_toPoly p i]
-      simp [CPolynomial.coeff, Raw.coeff, hi]
-    simp [CPolynomial.support, Polynomial.mem_support_iff, hi, hcoeff]
+  rw [CPolynomial.mem_support_iff, Polynomial.mem_support_iff, coeff_toPoly]
 
 /-- lemma: toImpl is natDegree's succ -/
-private lemma size_toImpl_eq_natDegree_succ [BEq R] [LawfulBEq R]
-    {q : R[X]} (hq : q ≠ 0) :
+private lemma size_toImpl_eq_natDegree_succ {q : R[X]} (hq : q ≠ 0) :
     q.toImpl.size = q.natDegree + 1 := by
   rcases Raw.toImpl_elim q with ⟨hzero, _⟩ | ⟨_, himpl⟩
   · exact (hq hzero).elim
@@ -179,12 +171,12 @@ theorem leadingCoeff_toPoly [BEq R] [LawfulBEq R] (p : CPolynomial R) :
       omega
     have hlastImpl :
         p.toPoly.toImpl.getLast (Raw.toImpl_nonzero htoPoly) = p.toPoly.leadingCoeff := by
-      simpa using Raw.getLast_toImpl htoPoly
+      simpa [Array.getLast] using Raw.getLast_toImpl htoPoly
     have hround : p.toPoly.toImpl = (p : CPolynomial.Raw R) := by
       simpa using toImpl_toPoly_of_canonical p
     have hlast : p.val.getLast hpos = p.toPoly.leadingCoeff := by
-      simpa [hround] using hlastImpl
-    simpa [CPolynomial.leadingCoeff, Array.getLastD, hpos] using hlast
+      simpa [hround, Array.getLast] using hlastImpl
+    simpa [CPolynomial.leadingCoeff, Array.getLastD, Array.getLast, hpos] using hlast
 
 /-- CPolynomial.monic is correct wrt the Mathlib spec -/
 theorem monic_toPoly_iff [BEq R] [LawfulBEq R] (p : CPolynomial R) :
@@ -201,10 +193,8 @@ theorem erase_toPoly {R : Type*} [Ring R] [BEq R] [LawfulBEq R] [DecidableEq R]
 /-- CPolynomial.C r mul CPolynomial.X ^ n is correct wrt the Mathlib spec. -/
 theorem C_mul_X_pow_toPoly [BEq R] [LawfulBEq R] [DecidableEq R] [Nontrivial R] (r : R) (n : ℕ) :
     (C r * X ^ n).toPoly = Polynomial.monomial n r := by
-  convert C_mul_X_pow_eq_monomial r n using 1
-  constructor <;> intro h
-  · exact C_mul_X_pow_eq_monomial r n
-  · convert monomial_toPoly n r
+  rw [C_mul_X_pow_eq_monomial r n]
+  exact monomial_toPoly n r
 
 /-- CPolynomial.lcoeff is correct wrt the Mathlib spec. -/
 theorem lcoeff_toPoly [BEq R] [LawfulBEq R] (n : ℕ) (p : CPolynomial R) :
@@ -215,13 +205,15 @@ theorem lcoeff_toPoly [BEq R] [LawfulBEq R] (n : ℕ) (p : CPolynomial R) :
 theorem degreeLE_toPoly {n : WithBot ℕ} [BEq R] [LawfulBEq R] {p : CPolynomial R} :
     p ∈ degreeLE (R := R) n ↔ p.toPoly ∈ Polynomial.degreeLE R n := by
   rw [Polynomial.mem_degreeLE]
-  convert (show p.degree ≤ n ↔ p.toPoly.degree ≤ n by rw [degree_toPoly]) using 1
+  change p.degree ≤ n ↔ p.toPoly.degree ≤ n
+  rw [degree_toPoly]
 
 /-- CPolynomial.degreeLT is correct wrt the Mathlib spec. -/
 theorem degreeLT_toPoly {n : ℕ} [BEq R] [LawfulBEq R] {p : CPolynomial R} :
     p ∈ degreeLT (R := R) n ↔ p.toPoly ∈ Polynomial.degreeLT R n := by
   rw [Polynomial.mem_degreeLT]
-  convert (show p.degree < n ↔ p.toPoly.degree < n by rw [degree_toPoly]) using 1
+  change p.degree < n ↔ p.toPoly.degree < n
+  rw [degree_toPoly]
 
 end ImplementationCorrectness
 
@@ -323,7 +315,7 @@ theorem eval_sub_C_mul_X_pow_trim_eq_self_of_eval_eq_zero
     [Field R] [BEq R] [LawfulBEq R] (p q : CPolynomial.Raw R) (scale : R)
     (shift : ℕ) {x : R} (hq : q.eval x = 0) :
     ((p - C scale * (q * X ^ shift)).trim).eval x = p.eval x := by
-  rw [Raw.eval_trim_eq_eval]
+  rw [eval_trim_eq_eval]
   rw [← eval_toPoly_eq_eval x]
   rw [toPoly_sub, toPoly_mul, toPoly_C, toPoly_mul, toPoly_pow, toPoly_X]
   rw [Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_mul,
@@ -363,7 +355,7 @@ end Raw
 theorem eval_modByMonic_eq_self_of_eval_eq_zero
     [Field R] [BEq R] [LawfulBEq R] (p q : CPolynomial R) {x : R}
     (hq : q.eval x = 0) :
-    (_root_.CompPoly.modByMonic p q).eval x = p.eval x := by
+    (CPolynomial.modByMonic p q).eval x = p.eval x := by
   have hq_raw : q.val.eval x = 0 := by
     simpa [CPolynomial.eval, Raw.eval, Raw.eval₂] using hq
   change (Raw.modByMonic p.val q.val).eval x = p.val.eval x

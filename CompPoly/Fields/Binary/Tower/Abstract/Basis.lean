@@ -5,6 +5,7 @@ Authors: Quang Dao, Chung Thai Nguyen
 -/
 
 import CompPoly.Fields.Binary.Tower.Abstract.Split
+import Mathlib.Algebra.Ring.Ext
 
 /-!
 # Abstract Binary Tower Basis
@@ -99,8 +100,9 @@ def multilinearBasis (l r : ℕ) (h_le : l ≤ r) :
       (b:=by
         convert prevMultilinearBasis;
       ) (c:=by
-        convert (powerBasisSucc (r1)).basis
-        rw [powerBasisSucc_dim (k:=r1)]
+        convert (powerBasisSucc (r1)).basis using 1
+        · rw [powerBasisSucc_dim (k:=r1)]
+        · exact Semiring.ext rfl rfl
       )
     convert res
     -- Basis are equal under the same @binaryAlgebraTower
@@ -174,7 +176,7 @@ lemma algebraMap_𝕏_eq_of_index_eq (r k m : ℕ) (h_k_le : k + 1 ≤ r) (h_m_l
     (h_eq : k = m) :
     letI := binaryAlgebraTower (l := k + 1) (r := r) (h_le := h_k_le)
     letI := binaryAlgebraTower (l := m + 1) (r := r) (h_le := h_m_le)
-    (Algebra.algebraMap (𝕏 k) : BTField r) = (Algebra.algebraMap (𝕏 m) : BTField r) := by
+    (algebraMap _ _ (𝕏 k) : BTField r) = (algebraMap _ _ (𝕏 m) : BTField r) := by
   subst h_eq
   rfl
 
@@ -302,13 +304,11 @@ theorem multilinearBasis_apply (r : ℕ) : ∀ l : ℕ, (h_le : l ≤ r) → ∀
       simp_rw [algebraMap.coe_pow] -- rhs
       simp_rw [algebraMap.coe_prod] -- lhs
       unfold Algebra.cast
-      rw! (castMode:=.all) [←algebraMap]
       conv_lhs =>
         rw [←Fin.prod_congr' (b:=r1-l) (a:=prevDiff) (h:=by omega)]
         simp only [Fin.val_cast]
-      simp (config := { failIfUnchanged := false }) only [algebraMap, instAlgebraSucc]
-      erw [RingHom.map_pow]
-      simp (config := { failIfUnchanged := false }) only [←binaryTowerAlgebra_apply_assoc]
+      simp only [RingHom.map_pow]
+      simp only [←binaryTowerAlgebra_apply_assoc]
       ------------------ Equality of bit-based powers of generators -----------------
       --- The outtermost term
       have hfinProd_msb := bit_revFinProdFinEquiv_symm_2_pow_succ (n:=prevDiff)

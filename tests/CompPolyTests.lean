@@ -12,6 +12,7 @@ import CompPolyTests.Univariate.ToPoly
 import CompPolyTests.Bivariate.Basic
 import CompPolyTests.Bivariate.Degree
 import CompPolyTests.Bivariate.Factor
+import CompPolyTests.Bivariate.Kronecker
 import CompPolyTests.Bivariate.Deriv
 import CompPolyTests.Bivariate.GuruswamiSudan.Compose
 import CompPolyTests.Bivariate.GuruswamiSudan.Core
@@ -20,6 +21,7 @@ import CompPolyTests.Bivariate.GuruswamiSudan.Hasse
 import CompPolyTests.Bivariate.GuruswamiSudan.Interpolation.Dense
 import CompPolyTests.Bivariate.GuruswamiSudan.Interpolation.Koetter
 import CompPolyTests.Bivariate.GuruswamiSudan.Interpolation.LeeOSullivan
+import CompPolyTests.Bivariate.GuruswamiSudan.Root.Alekhnovich
 import CompPolyTests.Bivariate.GuruswamiSudan.Root.FieldRoots.KoalaBear
 import CompPolyTests.Bivariate.GuruswamiSudan.Root.RothRuckenstein
 import CompPolyTests.Bivariate.Multiplicity
@@ -44,6 +46,7 @@ import CompPolyTests.Univariate.NTT.FastMul
 import CompPolyTests.Univariate.NTT.Forward
 import CompPolyTests.Univariate.NTT.Inverse
 import CompPolyTests.Univariate.Raw
+import CompPolyTests.Univariate.Roots.Enumeration
 import CompPolyTests.Univariate.Roots.FiniteField
 import CompPolyTests.Univariate.Roots.Shoup
 import CompPolyTests.Univariate.ToPoly

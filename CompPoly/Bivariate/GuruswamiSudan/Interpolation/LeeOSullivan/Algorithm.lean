@@ -16,7 +16,7 @@ shifted polynomial-row reduction.
 ## References
 
 * [Lee, K., and O'Sullivan, M. E., *List decoding of Reed-Solomon codes from a
-    Groebner basis perspective*][LOS08]
+    Groebner basis perspective*][LOS06]
 -/
 
 namespace CompPoly
@@ -27,7 +27,7 @@ namespace LeeOSullivan
 
 open PolynomialMatrix
 
-variable {F : Type*} [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] [DecidableEq F]
+variable {F : Type*} [Field F] [BEq F] [LawfulBEq F] [DecidableEq F]
 
 /-- Candidate row selected by least-shifted-degree scanning. -/
 structure RowChoice (F : Type*) [Zero F] where
@@ -36,7 +36,7 @@ structure RowChoice (F : Type*) [Zero F] where
   degree : Nat
 
 /-- Tie-breaking order for least-shifted-degree row selection. -/
-def betterRowChoice [Zero F] (candidate current : RowChoice F) : Bool :=
+def betterRowChoice (candidate current : RowChoice F) : Bool :=
   candidate.degree < current.degree ||
     (candidate.degree == current.degree && candidate.index < current.index)
 

@@ -5,7 +5,6 @@ Authors: Quang Dao, Gregor Mitscha-Baude, Derek Sorensen, Desmond Coles,
   Natalie Klaus, Dimitris Mitsios, Valerii Huhnin
 -/
 import CompPoly.Univariate.Raw.Division
-import CompPoly.Univariate.ToPoly.Raw
 
 /-!
 # Raw Univariate Polynomial Proofs
@@ -34,10 +33,10 @@ lemma pow_zero (p : CPolynomial.Raw R) :
     p ^ 0 = C 1 := by
       exact rfl
 
-/-- The iterate-based raw power definition unfolds one step on the left. -/
 lemma pow_succ (p : CPolynomial.Raw R) (n : ℕ) :
-    p ^ (n + 1) = p * (p ^ n) :=
-  Function.iterate_succ_apply' (mul p) n (C 1)
+    p ^ (n + 1) = p * (p ^ n) := by
+  change (mul p)^[n + 1] (C 1) = mul p ((mul p)^[n] (C 1))
+  rw [Function.iterate_succ_apply']
 
 section AddDefs
 
@@ -462,9 +461,11 @@ lemma smul_distrib_trim [LawfulBEq R] :
           have h_trim_eq : ∀ p q : CPolynomial.Raw R,
               (∀ i, p.coeff i = q.coeff i) → p.trim = q.trim := by
             exact fun p q a => Trim.eq_of_equiv a
-          convert h_trim_eq _ _ _ using 1
-          unfold addRaw; simp +decide [h_coeff ]
-          grind
+          rw [← show (smul a' q + smul a' r).trim = smul a' q + smul a' r by
+            show ((addRaw (smul a' q) (smul a' r)).trim).trim =
+              (addRaw (smul a' q) (smul a' r)).trim
+            exact Trim.trim_twice _]
+          exact h_trim_eq _ _ (fun i => by rw [h_coeff, add_coeff_trimmed])
 
 lemma coeff_smul_add_distrib [LawfulBEq R] (a : R) (q r : CPolynomial.Raw R) (i : ℕ) :
     (smul a (q + r)).coeff i = (smul a q).coeff i + (smul a r).coeff i := by
@@ -576,11 +577,24 @@ section MulInfrastructure
 section MulCoeffHelpers
 
 lemma equiv_mul_one [LawfulBEq R] (p : CPolynomial.Raw R) : Trim.equiv (p * 1) p := by
-  intro k
-  rw [coeff_mul]
-  rw [← Array.toList_map]
-  rw [Array.sum_eq_sum_toList]
-  exact coeff_sum p k
+  have h_mul_one : ∀ (p : CPolynomial.Raw R), (p * 1).coeff = p.coeff := by
+    intro p; funext i
+    rw [ show p * 1 = p * 1 from rfl ]
+    have mul_one_unwrap : ∀ (p : CPolynomial.Raw R), (p * 1).coeff = fun k =>
+      (p.zipIdx.map (fun ⟨a, i⟩ => ((smul a 1).mulPowX i).coeff k)).sum := by
+      intro p; funext k; exact (by
+      convert coeff_foldl_add
+          ( p.zipIdx.toList ) ( fun ⟨ a, i ⟩ => ( smul a 1 ).mulPowX i ) ( mk #[] ) k using 1
+      · have h_mul_def : ∀ (p : CPolynomial.Raw R), p * 1 =
+            (p.zipIdx.foldl (fun acc ⟨a, i⟩ => acc + (smul a 1).mulPowX i) (mk #[])) :=
+          fun p => mul_eq_foldl p 1
+        rw [h_mul_def, Array.foldl_toList]
+      · simp +decide
+        conv => rw [ ← Array.toList_zipIdx ]
+        conv => rw [ ← Array.toList_map ]
+        exact Eq.symm Array.sum_toList)
+    exact (by exact mul_one_unwrap p ▸ coeff_sum p i ▸ rfl)
+  exact congrFun (h_mul_one p)
 
 theorem mul_is_trimmed [LawfulBEq R] (p q : CPolynomial.Raw R) : (p * q).trim = p * q := by
   show ((mulRaw p q).trim).trim = (mulRaw p q).trim
@@ -671,9 +685,10 @@ lemma X_mul_eq_mulX_trim [LawfulBEq R]
   simp [X, Array.zipIdx]
   congr! 1
   · convert smul_zero_trim p using 1
-    convert zero_add_trim _ using 1
-    · exact congr_arg _ ( by exact Eq.symm (mulPowX_zero (smul 0 p)) )
-    · infer_instance
+    · convert zero_add_trim _ using 1
+      · exact congr_arg _ (by exact mulPowX_zero (smul 0 p))
+      · exact ‹LawfulBEq R›
+    · rfl
   · rw [ smul_one_eq_self ]
     rfl
 
@@ -707,10 +722,9 @@ lemma smul_monomial_one_trim [DecidableEq R] [LawfulBEq R]
   unfold smul monomial
   simp +decide
   split_ifs with h;
-  · convert trim_replicate_zero ( n + 1 ) using 1;
-    congr! 1;
-    · simp +decide [ h, Array.replicate_succ ];
-    · infer_instance;
+  · subst r
+    simpa +decide [Array.replicate_succ] using
+      (trim_replicate_zero (R := R) (n + 1))
   · exact Trim.push_trim (Array.replicate n 0) r h
 
 lemma smul_mulPowX_coeff [LawfulBEq R] (a : R) (q : CPolynomial.Raw R) (i k : ℕ) :
@@ -954,8 +968,8 @@ protected theorem add_mul [LawfulBEq R] (p q r : CPolynomial.Raw R) :
             (fun i => ((smul ((p + q).coeff i) r).mulPowX i).coeff k)) := by
       convert coeff_mul_eq_sum_range ( p + q ) r k ( p.size + q.size ) _ using 1
       have h_size_sum : (p + q).size ≤ max p.size q.size := by
-        convert Trim.size_le_size ( p.addRaw q ) using 1
-        exact Eq.symm add_size
+        change (p.addRaw q).trim.size ≤ max p.size q.size
+        exact le_trans (Trim.size_le_size (p.addRaw q)) (le_of_eq add_size)
       exact le_trans h_size_sum ( max_le ( Nat.le_add_right _ _ ) ( Nat.le_add_left _ _ ) )
     have h_split : List.sum ((List.range (p.size + q.size)).map
         (fun i => ((smul ((p + q).coeff i) r).mulPowX i).coeff k)) =
@@ -1025,10 +1039,10 @@ omit [BEq R] in
 theorem eval₂Horner_eq_eval₂
     (f : R →+* S) (x : S) (p : CPolynomial.Raw R) :
     eval₂Horner f x p = eval₂ f x p := by
-  unfold eval₂ eval₂Horner
-  rw [← Array.foldl_toList, ← Array.foldr_toList, Array.toList_zipIdx]
-  have := foldl_zipIdx_eq_foldr_pow_k f x 0 0 p.toList
-  simpa using this.symm
+    unfold eval₂ eval₂Horner
+    rw [← Array.foldl_toList, ← Array.foldr_toList, Array.toList_zipIdx]
+    have := foldl_zipIdx_eq_foldr_pow_k f x 0 0 p.toList
+    simpa using this.symm
 
 end EvalTheorems
 
@@ -1085,13 +1099,10 @@ theorem neg_add_cancel [LawfulBEq R] (p : CPolynomial.Raw R) : -p + p = 0 := by
 
 lemma sub_coeff [LawfulBEq R] (p q : CPolynomial.Raw R) (i : ℕ) :
     (p - q).coeff i = p.coeff i - q.coeff i := by
-  have h_add : coeff (p + -q) i =
-      coeff p i + coeff (-q) i := by
-    convert add_coeff_trimmed p ( -q ) i using 1
-  have h_neg : coeff (-q) i = -coeff q i := by
-    convert neg_coeff _ _
-  convert h_add.trans ( congr_arg₂ ( · + · ) rfl h_neg ) using 1
-  exact sub_eq_add_neg (p.coeff i) (q.coeff i)
+  change coeff (p + -q) i = p.coeff i - q.coeff i
+  rw [add_coeff_trimmed]
+  change p.coeff i + (neg q).coeff i = p.coeff i - q.coeff i
+  rw [neg_coeff, ← sub_eq_add_neg]
 
 /-- `Raw.sub` reduces to `p + -q`, whose final `add` step trims, so the result is canonical. -/
 theorem sub_is_trimmed [LawfulBEq R] (p q : CPolynomial.Raw R) : (p - q).trim = p - q := by
@@ -1306,13 +1317,13 @@ theorem div_canonical [LawfulBEq R] (p q : CPolynomial.Raw R) :
     (div p q).trim = div p q :=
   divByMonic_canonical _ _
 
-/-- `Raw.mod` returns a canonical polynomial when the dividend is canonical. -/
-theorem mod_canonical [LawfulBEq R] {p : CPolynomial.Raw R} (hp : p.trim = p)
-    (q : CPolynomial.Raw R) :
+/-- `Raw.mod` returns a canonical polynomial (no condition on inputs).
+The intermediate `C (q.leadingCoeff)⁻¹ • p` is `C _ * p` via `Mul.toSMul`, which trims. -/
+theorem mod_canonical [LawfulBEq R] (p q : CPolynomial.Raw R) :
     (mod p q).trim = mod p q := by
   unfold mod
-  apply modByMonic_canonical (R := R)
-  exact hp
+  apply modByMonic_canonical
+  exact mul_is_trimmed _ _
 
 end
 
@@ -1415,50 +1426,6 @@ termination_by n => n
 decreasing_by omega
 
 end RepeatedSquaring
-
-section EvalSum
-
-variable {R : Type*} [Semiring R] [BEq R] [LawfulBEq R]
-variable {S : Type*} [Semiring S]
-
-/-- `eval₂` equals the Finset sum over `range p.size`. -/
-theorem eval₂_eq_sum (f : R →+* S) (x : S) (p : CPolynomial.Raw R) :
-    eval₂ f x p =
-    (Finset.range p.size).sum (fun i ↦ f (p.coeff i) * x ^ i) := by
-  convert eval₂_eq_eval₂_naive f x p using 1
-  · unfold CPolynomial.Raw.eval₂Naive
-    induction p using Array.recOn
-    simp_all +decide
-    induction ‹List R› using List.reverseRecOn <;>
-      simp_all +decide [Finset.sum_range_succ]
-    simp_all +decide [Finset.sum_range, List.zipIdx_append]
-
-end EvalSum
-
-section PowSuccRight
-
-variable {R : Type*} [Semiring R] [BEq R]
-
-lemma pow_mul_comm [LawfulBEq R] (p : CPolynomial.Raw R) : ∀ n : ℕ,
-    p * (p ^ n) = p ^ n * p
-  | 0 => by
-    rw [pow_zero]
-    show p * (1 : CPolynomial.Raw R) = (1 : CPolynomial.Raw R) * p
-    rw [mul_one_trim, one_mul_trim]
-  | n + 1 => by
-    have ih := pow_mul_comm p n
-    calc p * p ^ (n + 1) = p * (p * p ^ n) := by rw [pow_succ]
-      _ = p * (p ^ n * p) := by rw [ih]
-      _ = (p * p ^ n) * p := by rw [Raw.mul_assoc]
-      _ = p ^ (n + 1) * p := by rw [← pow_succ]
-
-/-- `p ^ (n + 1) = p ^ n * p` under `LawfulBEq`. -/
-lemma pow_succ_right [LawfulBEq R] (p : CPolynomial.Raw R) (n : ℕ) :
-    p ^ (n + 1) = p ^ n * p := by
-  rw [pow_succ]
-  exact pow_mul_comm p n
-
-end PowSuccRight
 
 end CPolynomial.Raw
 

@@ -210,7 +210,7 @@ theorem ofPoly_coeff {R : Type*} [BEq R] [LawfulBEq R] [Nontrivial R] [Semiring 
 /-- The outer coefficient of `toPoly p` is `CPolynomial.coeff p n` converted to `R[X]`. -/
 theorem toPoly_coeff {R : Type*} [BEq R] [LawfulBEq R] [Semiring R]
     (p : CBivariate R) (n : ℕ) : (toPoly p).coeff n = (CPolynomial.coeff p n).toPoly := by
-      rw [ CBivariate.toPoly, Polynomial.finset_sum_coeff ]
+      rw [ CBivariate.toPoly, Polynomial.finsetSum_coeff ]
       rw [ Finset.sum_eq_single n ] <;> simp +contextual [ Polynomial.coeff_monomial ]
       simp_all +decide [ CPolynomial.mem_support_iff ]
       aesop
@@ -378,11 +378,15 @@ theorem evalY_toPoly {R : Type*} [BEq R] [LawfulBEq R] [Nontrivial R] [Semiring 
   simp only [Array.length_toList, Array.getElem?_toList]
   symm
   unfold CBivariate.toPoly
-  simp +decide [ Polynomial.eval_finset_sum ]
+  simp +decide [ Polynomial.eval_finsetSum ]
   rw [ Finset.sum_subset ]
   · exact fun i hi ↦ Finset.mem_range.mpr
       (Nat.lt_of_lt_of_le (Finset.mem_range.mp (Finset.mem_filter.mp hi |>.1)) (by simp))
-  · simp +contextual [ CPolynomial.support, CPolynomial.toPoly_zero ]
+  · simp +contextual [ CPolynomial.support ]
+    simp +decide [ CPolynomial.toPoly, CPolynomial.Raw.toPoly ]
+    unfold CPolynomial.Raw.eval₂
+    erw [ Array.foldl_empty ]
+    simp
 
 /-- Horner evaluation in Y agrees with the deferred-trim sum-of-powers evaluator.
 
@@ -423,7 +427,7 @@ theorem eval_eval_horner_y_then_x_eq_eval_eval {R : Type*}
 /-- `toPoly` preserves full evaluation: `evalEval x y f = (toPoly f).evalEval x y`. -/
 theorem evalEval_toPoly {R : Type*} [BEq R] [LawfulBEq R] [Nontrivial R] [Semiring R]
     (x y : R) (f : CBivariate R) :
-    evalEval x y f = (toPoly f).evalEval x y := by
+    @CBivariate.evalEval R _ _ _ _ x y f = (toPoly f).evalEval x y := by
   show CPolynomial.eval x (evalY (R := R) y f) = (toPoly f).evalEval x y
   rw [CPolynomial.eval_toPoly, evalY_toPoly]
 
@@ -464,7 +468,7 @@ theorem natDegreeY_toPoly {R : Type*} [BEq R] [LawfulBEq R] [Nontrivial R] [Semi
 theorem coeff_toPoly_Y {R : Type*} [BEq R] [LawfulBEq R] [Nontrivial R] [Semiring R]
     (f : CBivariate R) (j : ℕ) :
     (toPoly f).coeff j = CPolynomial.toPoly (f.val.coeff j) := by
-      erw [ Polynomial.finset_sum_coeff ]
+      erw [ Polynomial.finsetSum_coeff ]
       rw [ Finset.sum_eq_single j ] <;> simp +contextual [ Polynomial.coeff_monomial ]
       intro hj
       rw [ CPolynomial.support ] at hj
@@ -476,25 +480,11 @@ theorem coeff_toPoly_Y {R : Type*} [BEq R] [LawfulBEq R] [Nontrivial R] [Semirin
 theorem natDegreeX_toPoly {R : Type*} [BEq R] [LawfulBEq R] [Nontrivial R] [Semiring R]
     (f : CBivariate R) :
     (toPoly f).support.sup (fun j ↦ ((toPoly f).coeff j).natDegree) = f.natDegreeX := by
-      convert (Finset.sup_congr ?_ ?_)
-      · ext
-        simp +decide [ coeff_toPoly_Y ]
-        rw [ CPolynomial.support ]
-        by_cases h : ‹_› < f.val.size <;> simp_all +decide [ Finset.mem_filter, Finset.mem_range ]
-        · -- Since `toPoly` is injective, if `toPoly (f.coeff j) = 0`, then `f.coeff j = 0`.
-          have h_inj : ∀ (p : CPolynomial R), p.toPoly = 0 ↔ p = 0 := by
-            intro p
-            exact ⟨fun hp ↦ by
-              apply Subtype.ext
-              apply_fun (fun p ↦ p.toImpl) at hp
-              convert hp using 1
-              exact Eq.symm (CPolynomial.toImpl_toPoly_of_canonical p),
-              fun hp ↦ by aesop⟩
-          aesop
-        · exact (CPolynomial.toPoly_eq_zero_iff 0).mpr rfl
-      · intro j hj
-        rw [ coeff_toPoly_Y ]
-        exact Eq.symm (CPolynomial.natDegree_toPoly (f.val.coeff j))
+  rw [support_toPoly_outer, CBivariate.supportY, CBivariate.natDegreeX]
+  refine Finset.sup_congr rfl ?_
+  intro j hj
+  rw [coeff_toPoly_Y]
+  exact Eq.symm (CPolynomial.natDegree_toPoly (f.val.coeff j))
 
 /--
 `CC` corresponds to the nested constant polynomial in `R[X][Y]`.
@@ -522,8 +512,8 @@ theorem X_toPoly {R : Type*} [BEq R] [LawfulBEq R] [Nontrivial R] [Semiring R] :
 -/
 theorem Y_toPoly {R : Type*} [BEq R] [LawfulBEq R] [Nontrivial R] [Semiring R] [DecidableEq R] :
     toPoly (CBivariate.Y (R := R)) = (Polynomial.X : Polynomial (Polynomial R)) := by
-  simpa [CBivariate.Y, CPolynomial.C_toPoly] using
-    (toPoly_monomial (R := R) 1 (CPolynomial.C 1))
+  rw [CBivariate.Y, toPoly_monomial]
+  simp [CPolynomial.C_toPoly, Polynomial.monomial_one_one_eq_X]
 
 /--
 `monomialXY n m c` corresponds to `Y^m` with inner coefficient `X^n * c`.
@@ -533,8 +523,8 @@ theorem monomialXY_toPoly {R : Type*} [BEq R] [LawfulBEq R] [Nontrivial R] [Semi
     toPoly (monomialXY (R := R) n m c) = Polynomial.monomial m (Polynomial.monomial n c) := by
   unfold CBivariate.monomialXY
   rw [ toPoly_monomial ]
-  congr
-  simpa using CPolynomial.monomial_toPoly (R := R) n c
+  exact congrArg (fun p : Polynomial R => Polynomial.monomial m p)
+    (CPolynomial.monomial_toPoly (R := R) n c)
 
 /--
 `supportX` corresponds to the union of inner supports of outer coefficients.
@@ -582,13 +572,21 @@ theorem evalX_toPoly_coeff {R : Type*} [BEq R] [LawfulBEq R] [Nontrivial R] [Sem
         ∑ i ∈ f.support, if i = j then CPolynomial.eval a (f.val.coeff i) else 0 := by
     simp +decide [CBivariate.toPoly, Polynomial.coeff_monomial]
     split_ifs <;> simp +decide [*, CPolynomial.eval_toPoly]
-  convert h₁ (CPolynomial.support f) (fun i => f.val.coeff i) using 1
-  convert h₂ using 1
-  exact Finset.sum_congr rfl fun i hi => by
-    have (n : ℕ) (c : R) : (CPolynomial.monomial n c).toPoly = Polynomial.monomial n c := by
-        apply CPolynomial.monomial_toPoly
-    rw [this]
-    simp [Polynomial.coeff_monomial]
+  rw [show ((evalX (R := R) a f).toPoly).coeff j =
+      ∑ i ∈ CPolynomial.support f,
+        (CPolynomial.monomial i (CPolynomial.eval a (f.val.coeff i))).toPoly.coeff j by
+    unfold evalX
+    simpa using h₁ (CPolynomial.support f) (fun i => f.val.coeff i)]
+  rw [h₂]
+  refine Finset.sum_congr rfl ?_
+  intro i hi
+  calc
+    (CPolynomial.monomial i (CPolynomial.eval a (f.val.coeff i))).toPoly.coeff j =
+        (Polynomial.monomial i (CPolynomial.eval a (f.val.coeff i))).coeff j := by
+          exact congrArg (fun p : Polynomial R => p.coeff j)
+            (CPolynomial.monomial_toPoly (R := R) i (CPolynomial.eval a (f.val.coeff i)))
+    _ = if i = j then CPolynomial.eval a (f.val.coeff i) else 0 := by
+          simp [Polynomial.coeff_monomial]
 
 /--
 `evalX` is compatible with full bivariate evaluation when `a` and `y` commute.
@@ -624,7 +622,7 @@ theorem evalX_toPoly_eval_commute {R : Type*} [BEq R] [LawfulBEq R] [Nontrivial 
             Polynomial.eval a (∑ j ∈ s, g j * Polynomial.C (y ^ j)) =
               ∑ j ∈ s, Polynomial.eval a (g j) * y ^ j := by
       exact fun s g hg => by
-        rw [Polynomial.eval_finset_sum,
+        rw [Polynomial.eval_finsetSum,
           Finset.sum_congr rfl (fun j hj => h_eval_mul_C _ _ (hg j hj))]
     convert h_sum _ _ _
     · simp +decide [Polynomial.eval_eq_sum, Polynomial.sum_def]
@@ -825,8 +823,8 @@ theorem swap_toPoly_coeff {R : Type*} [BEq R] [LawfulBEq R] [Nontrivial R] [Semi
         by_contra h₁
         exact h (by simpa [CBivariate.supportY] using (CPolynomial.mem_support_iff f i).2 h₁)
       have h₂ : (f.val.coeff i).coeff j = 0 := by
-        simpa [CPolynomial.coeff] using
-          congrArg (fun p : CPolynomial R => CPolynomial.coeff p j) h₁
+        have hcoeff := congrArg (fun p : CPolynomial R => CPolynomial.coeff p j) h₁
+        exact hcoeff.trans (CPolynomial.coeff_zero (R := R) j)
       simpa [CPolynomial.coeff] using Eq.symm h₂
     · intro b hb
       have h₁ : i ≠ b := by

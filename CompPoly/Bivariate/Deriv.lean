@@ -38,18 +38,6 @@ namespace CompPoly
 
 namespace CBivariate
 
-/-- `CBivariate.coeff` as two composed `CPolynomial.coeff`. -/
-@[simp]
-lemma coeff_eq_coeff_coeff [Zero R] (f : CBivariate R) (i j : ℕ) :
-    CBivariate.coeff f i j = CPolynomial.coeff (CPolynomial.coeff f j) i := rfl
-
-/-- Bivariate coefficient distributes over addition. -/
-lemma coeff_add [Semiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
-    (f g : CBivariate R) (i j : ℕ) :
-    CBivariate.coeff (f + g) i j = CBivariate.coeff f i j + CBivariate.coeff g i j := by
-  simp only [coeff_eq_coeff_coeff]
-  erw [CPolynomial.coeff_add, CPolynomial.coeff_add]
-
 /-- Partial derivative with respect to X: differentiate each Y-coefficient in X. -/
 def partialDerivX [Semiring R] [BEq R] [LawfulBEq R] [Nontrivial R] [DecidableEq R]
     (f : CBivariate R) : CBivariate R :=
@@ -106,8 +94,15 @@ theorem coeff_partialDerivY [Semiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
 /-- The X-partial derivative of zero is zero. -/
 theorem partialDerivX_zero [Semiring R] [BEq R] [LawfulBEq R] [Nontrivial R] [DecidableEq R] :
     partialDerivX (0 : CBivariate R) = 0 := by
-  unfold partialDerivX
-  convert Finset.sum_empty
+  have hsupport : CPolynomial.support (0 : CBivariate R) = ∅ := by
+    ext j
+    constructor
+    · intro hj
+      exact False.elim (((CPolynomial.mem_support_iff (0 : CBivariate R) j).1 hj)
+        (CPolynomial.coeff_zero (R := CPolynomial R) j))
+    · intro hj
+      cases hj
+  simp [partialDerivX, hsupport]
 
 /-- The Y-partial derivative of zero is zero. -/
 theorem partialDerivY_zero [Semiring R] [BEq R] [LawfulBEq R] [Nontrivial R] :

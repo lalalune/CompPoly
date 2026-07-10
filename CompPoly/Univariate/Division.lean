@@ -57,28 +57,18 @@ abbrev div (p q : CPolynomial R) : CPolynomial R :=
 abbrev mod (p q : CPolynomial R) : CPolynomial R :=
   p.mod q
 
-instance : Div (CPolynomial R) := ⟨div⟩
-instance : Mod (CPolynomial R) := ⟨mod⟩
-
 /-- Normalize a nonzero polynomial to monic form. The zero polynomial stays zero. -/
 abbrev monicNormalize (p : CPolynomial R) : CPolynomial R :=
-  CPolynomial.ofArray (Raw.monicNormalize p.val)
+  p.monicNormalize
 
 /-- Euclidean gcd with explicit fuel, normalized to a monic result. -/
 abbrev gcdMonicWithFuel (fuel : Nat) (p q : CPolynomial R) : CPolynomial R :=
-  CPolynomial.ofArray (Raw.gcdMonicWithFuel fuel p.val q.val)
+  CPolynomial.gcdMonicWithFuel fuel p q
 
 /-- Monic Euclidean gcd for canonical univariate polynomials. -/
 abbrev gcdMonic (p q : CPolynomial R) : CPolynomial R :=
-  CPolynomial.ofArray (Raw.gcdMonic p.val q.val)
+  p.gcdMonic q
 
 end Division
-
--- Re-export the field-level monic-normalization and gcd wrappers into the
--- `CPolynomial` namespace, where the correctness theorems and downstream callers
--- (`Roots/`, `NTTFast/`) reference them.
-namespace CPolynomial
-export CompPoly (monicNormalize gcdMonicWithFuel gcdMonic)
-end CPolynomial
 
 end CompPoly

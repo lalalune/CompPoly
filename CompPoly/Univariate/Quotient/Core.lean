@@ -44,7 +44,7 @@ theorem equiv_trans [Zero Q] {p q r : CPolynomial.Raw Q} :
   simp_all [Trim.equiv]
 
 /-- The `CPolynomial.Raw.equiv` is indeed an equivalence relation. -/
-instance instEquivalenceEquiv [Zero R] : Equivalence (equiv (R := R)) where
+theorem instEquivalenceEquiv [Zero R] : Equivalence (equiv (R := R)) where
   refl := equiv_refl
   symm := equiv_symm
   trans := equiv_trans
@@ -622,7 +622,6 @@ lemma npow_zero : ∀ (x : QuotientCPolynomial R), x.pow 0 = 1 := by
   refine Quotient.inductionOn x ?_
   intro p; clear x
   apply Quotient.sound
-  show CPolynomial.Raw.pow p 0 ≈ C 1
   unfold CPolynomial.Raw.pow
   simp
 
@@ -640,9 +639,10 @@ lemma pow_succ_left (n : ℕ) (x : QuotientCPolynomial R) :
   refine Quotient.inductionOn x ?_
   intro p
   apply Quotient.sound
-  -- By Raw.pow_succ, we have p ^ (n + 1) = p * p ^ n.
-  have h_pow : CPolynomial.Raw.pow p (n + 1) = p.mul (CPolynomial.Raw.pow p n) := by
-    exact Raw.pow_succ p n
+  -- p.pow (n+1) = p * p.pow n is true by definition of pow for CPolynomial.Raw
+  -- By definition of pow, we have p.pow (n + 1) = p.mul (p.pow n).
+  have h_pow : p.pow (n + 1) = p.mul (p.pow n) := by
+    exact Function.iterate_succ_apply' _ _ _
   exact congrFun (congrArg coeff h_pow)
 
 /-
@@ -662,9 +662,9 @@ lemma npow_succ : ∀ (n : ℕ) (x : QuotientCPolynomial R), x.pow (n + 1) = x.p
   refine Quotient.inductionOn x ?_
   intro p; clear x
   apply Quotient.sound
-  -- By Raw.pow_succ, we have `p ^ (n + 1) = p * p ^ n`.
-  rw [show CPolynomial.Raw.pow p (n + 1) = p.mul (CPolynomial.Raw.pow p n) from
-        Raw.pow_succ p n]
+  -- By definition of exponentiation, we have `p.pow (n + 1) = p * p.pow n` for any `p`.
+  rw [show p.pow (n + 1) = p.mul (p.pow n) from by
+        exact Function.iterate_succ_apply' _ _ _]
   convert commute_pow_self n ( Quotient.mk ( Raw.instSetoidCPolynomial ) p ) using 1
   erw [ Quotient.eq ]
 
@@ -727,13 +727,14 @@ variable [Ring R] [BEq R] [LawfulBEq R]
 instance : Ring (QuotientCPolynomial R) where
   intCast_ofNat := by intro n; simp [IntCast.intCast]; rfl
   intCast_negSucc := by
-    -- By definition of `Int.negSucc`, we have `Int.negSucc n = - (n + 1)`.
-    have h_neg_succ : ∀ n : ℕ, Int.negSucc n = - (n + 1 : ℤ) := by grind
-    convert h_neg_succ
-    convert Quotient.eq using 1
-    simp +decide
-    simp +decide [ Raw.C, Raw.neg ]
-    grind
+    intro n
+    apply Quotient.sound
+    intro i
+    cases i with
+    | zero =>
+        simp [CPolynomial.Raw.C, CPolynomial.Raw.neg, Int.negSucc_eq]
+    | succ i =>
+        simp [CPolynomial.Raw.C, CPolynomial.Raw.neg]
 end Ring
 
 section CommRing

@@ -24,7 +24,7 @@ variable {R : Type*} [Field R]
 
 open scoped BigOperators
 
-private theorem raw_toPoly_degree_lt_size [BEq R] [LawfulBEq R] (p : CPolynomial.Raw R) :
+private theorem raw_toPoly_degree_lt_size (p : CPolynomial.Raw R) :
     p.toPoly.degree < p.size := by
   rw [Polynomial.degree_lt_iff_coeff_zero]
   intro i hi
@@ -32,7 +32,7 @@ private theorem raw_toPoly_degree_lt_size [BEq R] [LawfulBEq R] (p : CPolynomial
   simp [CPolynomial.Raw.coeff]
   simp [Nat.not_lt.mpr hi]
 
-private theorem raw_toPoly_natDegree_lt_size_of_size_pos [BEq R] [LawfulBEq R]
+private theorem raw_toPoly_natDegree_lt_size_of_size_pos
     (p : CPolynomial.Raw R) (hp : 0 < p.size) :
     p.toPoly.natDegree < p.size := by
   by_cases hzero : p.toPoly = 0
@@ -99,8 +99,7 @@ private theorem forwardSpec_inverseSpec_get_eq (D : Domain R) (values : Array R)
             exact (hii (Finset.mem_univ i)).elim
 
 /-- Pointwise form of `inverseSpec_interpolatePow_eq`. -/
-theorem inverseSpec_eval_node_eq [BEq R] [LawfulBEq R]
-    (D : Domain R) (values : Array R) (k : D.Idx) :
+theorem inverseSpec_eval_node_eq (D : Domain R) (values : Array R) (k : D.Idx) :
     CPolynomial.Raw.eval (D.node k) (inverseSpec D values) = values.getD k.1 0 := by
   have hdeg : (CPolynomial.Raw.toPoly (inverseSpec D values)).natDegree < D.n := by
     simpa [inverseSpec] using
@@ -112,8 +111,7 @@ theorem inverseSpec_eval_node_eq [BEq R] [LawfulBEq R]
   exact hvalues
 
 /-- The inverse NTT specification evaluates back to the input values on the NTT domain. -/
-theorem inverseSpec_evalOnDomain_eq [BEq R] [LawfulBEq R]
-    (D : Domain R) (values : Array R) :
+theorem inverseSpec_evalOnDomain_eq (D : Domain R) (values : Array R) :
     evalOnDomain D (inverseSpec D values) = loadNaturalArray D values := by
   apply Array.ext
   · simp [evalOnDomain, loadNaturalArray]
@@ -145,6 +143,9 @@ theorem inverseSpec_interpolatePow_eq [BEq R] [LawfulBEq R]
   have hinterpdeg : q.toPoly.degree < D.n := by
     unfold q CLagrange.interpolatePow
     rw [CLagrange.cinterpolate_eq_interpolate]
+    change (∑ k : D.Idx,
+        Polynomial.C (r.get k) *
+          Lagrange.basis Finset.univ (fun k : D.Idx => D.node k) k).degree < D.n
     simpa [Domain.node] using
       Lagrange.degree_interpolate_lt
         (s := Finset.univ) (v := fun k : D.Idx => D.node k)
@@ -187,15 +188,13 @@ theorem inverseImpl_interpolatePow_eq [BEq R] [LawfulBEq R]
   exact inverseSpec_interpolatePow_eq D values
 
 /-- Pointwise form of `inverseImpl_interpolatePow_eq`. -/
-theorem inverseImpl_eval_node_eq [BEq R] [LawfulBEq R]
-    (D : Domain R) (values : Array R) (k : D.Idx) :
+theorem inverseImpl_eval_node_eq (D : Domain R) (values : Array R) (k : D.Idx) :
     CPolynomial.Raw.eval (D.node k) (inverseImpl D values) = values.getD k.1 0 := by
   rw [inverseImpl_correct]
   exact inverseSpec_eval_node_eq D values k
 
 /-- The inverse NTT implementation evaluates back to the input values on the NTT domain. -/
-theorem inverseImpl_evalOnDomain_eq [BEq R] [LawfulBEq R]
-    (D : Domain R) (values : Array R) :
+theorem inverseImpl_evalOnDomain_eq (D : Domain R) (values : Array R) :
     evalOnDomain D (inverseImpl D values) = loadNaturalArray D values := by
   rw [inverseImpl_correct]
   exact inverseSpec_evalOnDomain_eq D values

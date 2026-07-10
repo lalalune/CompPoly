@@ -4,8 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Valerii Huhnin
 -/
 
-import CompPoly.Bivariate.GuruswamiSudan.Interpolation
-import CompPoly.Bivariate.GuruswamiSudan.Root
+import CompPoly.Bivariate.GuruswamiSudan.Context
 
 /-!
 # Guruswami-Sudan Core
