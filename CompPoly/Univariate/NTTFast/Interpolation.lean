@@ -34,7 +34,7 @@ theorem inverseImpl_interpolatePow_eq [BEq R] [LawfulBEq R]
   exact NTT.Inverse.inverseSpec_interpolatePow_eq P.domain values
 
 /-- Pointwise form of `inverseImpl_interpolatePow_eq` for a well-formed planned inverse. -/
-theorem inverseImpl_eval_node_eq [BEq R] [LawfulBEq R]
+theorem inverseImpl_eval_node_eq
     (P : Plan R) (hP : WellFormed P) (values : Array R) (k : P.domain.Idx) :
     CPolynomial.Raw.eval (P.domain.node k)
       (inverseImpl P (NTT.Transform.bitRevPermute P.domain values)) = values.getD k.1 0 := by
@@ -42,7 +42,7 @@ theorem inverseImpl_eval_node_eq [BEq R] [LawfulBEq R]
   exact NTT.Inverse.inverseSpec_eval_node_eq P.domain values k
 
 /-- A well-formed planned inverse evaluates back to the natural-order input values. -/
-theorem inverseImpl_evalOnDomain_eq [BEq R] [LawfulBEq R]
+theorem inverseImpl_evalOnDomain_eq
     (P : Plan R) (hP : WellFormed P) (values : Array R) :
     NTT.evalOnDomain P.domain (inverseImpl P (NTT.Transform.bitRevPermute P.domain values)) =
       NTT.loadNaturalArray P.domain values := by

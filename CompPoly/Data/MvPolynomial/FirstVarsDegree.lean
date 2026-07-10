@@ -33,7 +33,7 @@ lemma le_firstVarsDegree_of_mem_support {P : MvPolynomial (Fin (n + 1)) R}
     {α : Fin (n + 1) →₀ ℕ} (hα : α ∈ P.support) :
     (∑ i : Fin n, α (Fin.castSucc i)) ≤ firstVarsDegree (R := R) P := by
   classical
-  simpa using Finset.le_sup (s := P.support)
+  exact Finset.le_sup (s := P.support)
     (f := fun β : Fin (n + 1) →₀ ℕ => ∑ i : Fin n, β (Fin.castSucc i)) hα
 
 /-- `firstVarsDegree` of a monomial with nonzero coefficient. -/

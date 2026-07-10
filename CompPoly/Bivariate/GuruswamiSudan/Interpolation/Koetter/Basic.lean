@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Valerii Huhnin
 -/
 
+import CompPoly.Bivariate.GuruswamiSudan.Interpolation.LeeOSullivan.Correctness.Combinations
 import CompPoly.Bivariate.GuruswamiSudan.Interpolation.Basic
 
 /-!
@@ -16,11 +17,6 @@ interpolation implementation.
 namespace CompPoly
 
 namespace GuruswamiSudan
-
-/-- Finite `Y` cap used by the positive-`Y`-weight Koetter branch. -/
-def koetterYCap (params : GSInterpParams) : Nat :=
-  params.weightedDegreeBound / yWeight params
-
 /-- The monic linear factor `X - x` as a bivariate polynomial. -/
 def CBivariate.linearXFactor {R : Type*}
     [Ring R] [BEq R] [LawfulBEq R] [Nontrivial R] (x : R) :

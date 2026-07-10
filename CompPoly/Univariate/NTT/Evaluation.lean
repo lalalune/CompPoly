@@ -18,7 +18,7 @@ namespace CompPoly
 namespace CPolynomial
 namespace NTT
 
-variable {R : Type*} [Field R] [BEq R] [LawfulBEq R]
+variable {R : Type*} [Field R]
 
 /-- Evaluate a raw polynomial on all nodes of an NTT domain in natural order. -/
 def evalOnDomain (D : Domain R) (p : CPolynomial.Raw R) : Array R :=

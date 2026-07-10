@@ -107,7 +107,7 @@ private lemma Raw.toPoly_ne_zero_of_size_pos {p : CPolynomial.Raw R}
     rw [← toPoly_eq_zero_iff cp]
     exact hp0
   have hp_empty : p = (#[] : CPolynomial.Raw R) := by
-    simpa [cp] using congrArg Subtype.val hcp0
+    exact congrArg Subtype.val hcp0
   have : p.size = 0 := by simpa using congrArg Array.size hp_empty
   omega
 
@@ -156,8 +156,8 @@ private lemma divModByMonicAux_step_degree_lt (p q : CPolynomial.Raw R)
   rw [Raw.toPoly_trim, Raw.toPoly_sub_eq, Raw.toPoly_mul_eq, Raw.toPoly_C,
     Raw.toPoly_mul_eq, Raw.toPoly_powFn_eq, Raw.toPoly_X,
     Raw.leadingCoeff_toPoly_eq p hp, hk]
-  convert hdrop using 2
-  ring
+  rw [mul_left_comm]
+  exact hdrop
 
 private lemma divModByMonicAux_go_eq (n : ℕ) (p q : CPolynomial.Raw R) :
     q.toPoly * (Raw.divModByMonicAux.go n p q).1.toPoly +
@@ -328,6 +328,11 @@ theorem degree_toPoly_ofFinCoeff_lt (N : ℕ) (c : ℕ → R) :
   rw [toPoly_monomial]
   exact lt_of_le_of_lt (Polynomial.degree_monomial_le k (c k))
     (WithBot.coe_lt_coe.mpr (mem_range.mp hk))
+
+omit [Nontrivial R] in
+/-- A monomial with zero coefficient is the zero polynomial. -/
+theorem monomial_eq_zero (n : ℕ) : (monomial n (0 : R) : CPolynomial R) = 0 :=
+  eq_zero_iff_coeff_zero.mpr (fun j => by rw [coeff_monomial]; split_ifs <;> rfl)
 
 end OfFinCoeff
 

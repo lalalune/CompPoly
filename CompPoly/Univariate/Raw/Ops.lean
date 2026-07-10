@@ -31,13 +31,6 @@ variable {S : Type*}
 def eval₂ [Semiring R] [Semiring S] (f : R →+* S) (x : S) (p : CPolynomial.Raw R) : S :=
   p.zipIdx.foldl (fun acc ⟨a, i⟩ => acc + f a * x ^ i) 0
 
-/-- Naive sum-of-powers evaluation (reference implementation).
-
-  Computes `f(a₀) + f(a₁) * x + f(a₂) * x² + ...` where `aᵢ` are the coefficients.
-  Retained as a specification target for the optimized backends. -/
-def eval₂Naive [Semiring R] [Semiring S] (f : R →+* S) (x : S) (p : CPolynomial.Raw R) : S :=
-  p.zipIdx.foldl (fun acc ⟨a, i⟩ => acc + f a * x ^ i) 0
-
 /-- Evaluates a `CPolynomial.Raw` at `x : S` using Horner's method.
 
   Computes `f(aₙ) + x * (f(aₙ₋₁) + x * (... + x * f(a₀)))` via a right fold. -/

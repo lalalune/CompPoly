@@ -115,13 +115,15 @@ theorem koetterUpdatedEntry_rowLeadingAt {F : Type*}
       koetterSelectPivot_some_index_lt hpivot
     have hPivotRow :
         koetterRowLeadingAt params pivot.index (basis.getD pivot.index 0) := by
-      simpa [koetterBasisWeakLeading, Array.getD_eq_getD_getElem?] using
+      simpa [koetterBasisWeakLeading, Array.getD_eq_getD_getElem?,
+          show (default : CBivariate F) = 0 from rfl] using
         hBasis pivot.index hpivotLt
     exact koetterRowLeadingAt_linearXFactor_mul constraint.x hPivotRow
   · rw [if_neg hidx]
     by_cases hdelta : koetterDiscrepancy constraint (basis.getD idx 0) == 0
     · rw [if_pos hdelta]
-      simpa [koetterBasisWeakLeading, Array.getD_eq_getD_getElem?] using hBasis idx hi
+      simpa [koetterBasisWeakLeading, Array.getD_eq_getD_getElem?,
+          show (default : CBivariate F) = 0 from rfl] using hBasis idx hi
     · rw [if_neg hdelta]
       have hdiscNe : koetterDiscrepancy constraint (basis.getD idx 0) ≠ 0 := by
         intro hzero
@@ -134,10 +136,12 @@ theorem koetterUpdatedEntry_rowLeadingAt {F : Type*}
         koetterSelectPivot_some_index_lt hpivot
       have hCurrent :
           koetterRowLeadingAt params idx (basis.getD idx 0) := by
-        simpa [koetterBasisWeakLeading, Array.getD_eq_getD_getElem?] using hBasis idx hi
+        simpa [koetterBasisWeakLeading, Array.getD_eq_getD_getElem?,
+          show (default : CBivariate F) = 0 from rfl] using hBasis idx hi
       have hPivot :
           koetterRowLeadingAt params pivot.index (basis.getD pivot.index 0) := by
-        simpa [koetterBasisWeakLeading, Array.getD_eq_getD_getElem?] using
+        simpa [koetterBasisWeakLeading, Array.getD_eq_getD_getElem?,
+          show (default : CBivariate F) = 0 from rfl] using
           hBasis pivot.index hpivotLt
       have hpivotDegree := koetterSelectPivot_some_weightedDegree_eq hpivot
       have hpivotLeIdx :

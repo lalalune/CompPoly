@@ -6,6 +6,7 @@ Authors: Valerii Huhnin
 
 import CompPoly.Bivariate.GuruswamiSudan.Interpolation.Koetter.Algorithm
 import CompPoly.Bivariate.GuruswamiSudan.Interpolation.Correctness
+import CompPoly.Bivariate.GuruswamiSudan.Interpolation.LeeOSullivan.Correctness.Combinations
 import CompPoly.Univariate.DivisionCorrectness
 import Mathlib.Data.List.Range
 
@@ -17,18 +18,6 @@ Koetter correctness.
 -/
 
 namespace CompPoly
-
-theorem cpoly_eval_add {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] (x : F) (P Q : CPolynomial F) :
-    CPolynomial.eval x (P + Q) = CPolynomial.eval x P + CPolynomial.eval x Q := by
-  rw [CPolynomial.eval_toPoly, CPolynomial.toPoly_add, Polynomial.eval_add,
-    ← CPolynomial.eval_toPoly, ← CPolynomial.eval_toPoly]
-
-theorem cpoly_eval_X {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] (x : F) :
-    CPolynomial.eval x CPolynomial.X = x := by
-  rw [CPolynomial.eval_toPoly, CPolynomial.X_toPoly, Polynomial.eval_X]
-
 theorem cpoly_eval_X_mul_divX_add {F : Type*}
     [Field F] [BEq F] [LawfulBEq F] [Nontrivial F]
     (x : F) (P : CPolynomial F) :
@@ -42,17 +31,6 @@ theorem cpoly_eval_X_mul_divX_add {F : Type*}
   rw [cpoly_eval_add, CPolynomial.eval_mul, cpoly_eval_X,
     CPolynomial.eval_C] at heval
   exact heval
-
-theorem cpoly_eq_of_toPoly_eq {F : Type*}
-    [Semiring F] [BEq F] [LawfulBEq F] {P Q : CPolynomial F}
-    (h : P.toPoly = Q.toPoly) :
-    P = Q := by
-  apply (CPolynomial.eq_iff_coeff (p := P) (q := Q)).2
-  intro i
-  have hcoeff := congrArg (fun p : Polynomial F ↦ p.coeff i) h
-  change P.toPoly.coeff i = Q.toPoly.coeff i at hcoeff
-  rwa [← CPolynomial.coeff_toPoly, ← CPolynomial.coeff_toPoly] at hcoeff
-
 theorem cpoly_linearFactor_toPoly {F : Type*}
     [Field F] [BEq F] [LawfulBEq F] (x : F) :
     (CPolynomial.linearFactor x).toPoly = Polynomial.X - Polynomial.C x := by
@@ -78,21 +56,6 @@ theorem cpoly_linearFactor_mul_divByMonic_eq_self_of_eval_eq_zero {F : Type*}
     cpoly_linearFactor_toPoly]
   apply Polynomial.mul_divByMonic_eq_iff_isRoot.mpr
   simpa [Polynomial.IsRoot, CPolynomial.eval_toPoly] using hroot
-
-theorem cpoly_coeff_eq_zero_of_natDegree_lt {F : Type*}
-    [Zero F] [BEq F] [LawfulBEq F] {P : CPolynomial F} {i : Nat}
-    (h : P.natDegree < i) :
-    P.coeff i = 0 := by
-  by_contra hne
-  exact (Nat.not_lt_of_ge (CPolynomial.le_natDegree_of_ne_zero hne)) h
-
-theorem cpoly_natDegree_mul_le {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] (P Q : CPolynomial F) :
-    (P * Q).natDegree ≤ P.natDegree + Q.natDegree := by
-  rw [CPolynomial.natDegree_toPoly, CPolynomial.toPoly_mul,
-    CPolynomial.natDegree_toPoly, CPolynomial.natDegree_toPoly]
-  exact Polynomial.natDegree_mul_le
-
 theorem cpoly_coeff_mul_natDegree_add {F : Type*}
     [Field F] [BEq F] [LawfulBEq F] (P Q : CPolynomial F) :
     (P * Q).coeff (P.natDegree + Q.natDegree) =
@@ -103,193 +66,6 @@ theorem cpoly_coeff_mul_natDegree_add {F : Type*}
     ← CPolynomial.leadingCoeff_toPoly, ← CPolynomial.leadingCoeff_toPoly]
 
 namespace CBivariate
-
-theorem coeff_neg {R : Type*}
-    [Ring R] [BEq R] [LawfulBEq R] [Nontrivial R]
-    (P : CBivariate R) (i j : Nat) :
-    coeff (-P) i j = -coeff P i j := by
-  change CPolynomial.coeff (CPolynomial.coeff (-P : CBivariate R) j) i =
-    -CPolynomial.coeff (CPolynomial.coeff P j) i
-  have houter : CPolynomial.coeff (-P : CBivariate R) j =
-      -CPolynomial.coeff P j := by
-    exact CPolynomial.coeff_neg (p := P) (i := j)
-  rw [houter, CPolynomial.coeff_neg]
-
-theorem coeff_sub {R : Type*}
-    [Ring R] [BEq R] [LawfulBEq R] [Nontrivial R]
-    (P Q : CBivariate R) (i j : Nat) :
-    coeff (P - Q) i j = coeff P i j - coeff Q i j := by
-  change CPolynomial.coeff (CPolynomial.coeff (P - Q : CBivariate R) j) i =
-    CPolynomial.coeff (CPolynomial.coeff P j) i -
-      CPolynomial.coeff (CPolynomial.coeff Q j) i
-  have houter : CPolynomial.coeff (P - Q : CBivariate R) j =
-      CPolynomial.coeff P j - CPolynomial.coeff Q j := by
-    exact CPolynomial.coeff_sub (p := P) (q := Q) (i := j)
-  rw [houter, CPolynomial.coeff_sub]
-
-theorem coeff_CC_mul {R : Type*}
-    [Semiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
-    (c : R) (Q : CBivariate R) (i j : Nat) :
-    coeff (CC c * Q) i j = c * coeff Q i j := by
-  change CPolynomial.coeff (CPolynomial.coeff (CC c * Q : CBivariate R) j) i =
-    c * CPolynomial.coeff (CPolynomial.coeff Q j) i
-  have houter : CPolynomial.coeff (CC c * Q : CBivariate R) j =
-      CPolynomial.C c * CPolynomial.coeff Q j := by
-    exact CPolynomial.coeff_C_mul (p := Q) (c := CPolynomial.C c) j
-  rw [houter, CPolynomial.coeff_C_mul]
-
-theorem coeff_X_mul_zero {R : Type*}
-    [Semiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
-    (Q : CBivariate R) (j : Nat) :
-    coeff (X * Q) 0 j = 0 := by
-  change CPolynomial.coeff (CPolynomial.coeff (X * Q : CBivariate R) j) 0 = 0
-  have houter : CPolynomial.coeff (X * Q : CBivariate R) j =
-      CPolynomial.X * CPolynomial.coeff Q j := by
-    exact CPolynomial.coeff_C_mul (p := Q) (c := CPolynomial.X) j
-  rw [houter, CPolynomial.coeff_X_mul_zero]
-
-theorem coeff_X_mul_succ {R : Type*}
-    [Semiring R] [BEq R] [LawfulBEq R] [Nontrivial R]
-    (Q : CBivariate R) (i j : Nat) :
-    coeff (X * Q) (i + 1) j = coeff Q i j := by
-  change CPolynomial.coeff (CPolynomial.coeff (X * Q : CBivariate R) j) (i + 1) =
-    CPolynomial.coeff (CPolynomial.coeff Q j) i
-  have houter : CPolynomial.coeff (X * Q : CBivariate R) j =
-      CPolynomial.X * CPolynomial.coeff Q j := by
-    exact CPolynomial.coeff_C_mul (p := Q) (c := CPolynomial.X) j
-  rw [houter, CPolynomial.coeff_X_mul_succ]
-
-theorem evalEval_sub {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] [DecidableEq F]
-    (x y : F) (P Q : CBivariate F) :
-    evalEval x y (P - Q) = evalEval x y P - evalEval x y Q := by
-  rw [evalEval_toPoly, evalEval_toPoly, evalEval_toPoly]
-  have hsub : toPoly (P - Q) = toPoly P - toPoly Q := by
-    simpa [ringEquiv] using (ringEquiv (R := F)).map_sub P Q
-  rw [hsub]
-  simp [Polynomial.evalEval]
-
-theorem evalEval_CC_mul {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] [DecidableEq F]
-    (c x y : F) (Q : CBivariate F) :
-    evalEval x y (CC c * Q) = c * evalEval x y Q := by
-  rw [evalEval_toPoly, evalEval_toPoly, toPoly_mul, CC_toPoly]
-  simp [Polynomial.evalEval]
-
-theorem evalEval_X_mul {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] [DecidableEq F]
-    (x y : F) (Q : CBivariate F) :
-    evalEval x y (X * Q) = x * evalEval x y Q := by
-  rw [evalEval_toPoly, evalEval_toPoly, toPoly_mul, X_toPoly]
-  simp [Polynomial.evalEval]
-
-theorem hasseDerivative_sub {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] [DecidableEq F]
-    (a b : Nat) (P Q : CBivariate F) :
-    hasseDerivative a b (P - Q) =
-      hasseDerivative a b P - hasseDerivative a b Q := by
-  rw [eq_iff_coeff]
-  intro i j
-  rw [hasseDerivative_coeff, coeff_sub, coeff_sub, hasseDerivative_coeff,
-    hasseDerivative_coeff]
-  ring
-
-theorem hasseDerivative_CC_mul {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] [DecidableEq F]
-    (c : F) (a b : Nat) (Q : CBivariate F) :
-    hasseDerivative a b (CC c * Q) = CC c * hasseDerivative a b Q := by
-  rw [eq_iff_coeff]
-  intro i j
-  rw [hasseDerivative_coeff, coeff_CC_mul, coeff_CC_mul, hasseDerivative_coeff]
-  ring
-
-theorem hasseDerivative_X_mul_zero_xOrder {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] [DecidableEq F]
-    (b : Nat) (Q : CBivariate F) :
-    hasseDerivative 0 b (X * Q) = X * hasseDerivative 0 b Q := by
-  rw [eq_iff_coeff]
-  intro i j
-  cases i with
-  | zero =>
-      rw [hasseDerivative_coeff, coeff_X_mul_zero, coeff_X_mul_zero]
-      simp
-  | succ i =>
-      rw [hasseDerivative_coeff, coeff_X_mul_succ, coeff_X_mul_succ,
-        hasseDerivative_coeff]
-      simp
-
-theorem hasseDerivative_X_mul_succ_xOrder {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] [DecidableEq F]
-    (a b : Nat) (Q : CBivariate F) :
-    hasseDerivative (a + 1) b (X * Q) =
-      X * hasseDerivative (a + 1) b Q + hasseDerivative a b Q := by
-  rw [eq_iff_coeff]
-  intro i j
-  cases i with
-  | zero =>
-      rw [hasseDerivative_coeff, coeff_add, coeff_X_mul_zero, hasseDerivative_coeff]
-      rw [show 0 + (a + 1) = a.succ by omega]
-      rw [coeff_X_mul_succ]
-      rw [show a + 1 = a.succ by omega, Nat.choose_self]
-      rw [show 0 + a = a by omega, Nat.choose_self]
-      ring
-  | succ i =>
-      rw [hasseDerivative_coeff, coeff_add, coeff_X_mul_succ,
-        hasseDerivative_coeff, hasseDerivative_coeff]
-      have hX :
-          coeff (X * Q) (i + 1 + (a + 1)) (j + b) =
-            coeff Q (i + (a + 1)) (j + b) := by
-        convert coeff_X_mul_succ (Q := Q) (i + a + 1) (j + b) using 2
-        omega
-      rw [hX]
-      rw [show i + 1 + (a + 1) = (i + a + 1).succ by omega]
-      rw [show i + (a + 1) = i + a + 1 by omega]
-      rw [show i + 1 + a = i + a + 1 by omega]
-      rw [Nat.choose_succ_succ]
-      norm_num
-      ring_nf
-
-theorem hasseDerivativeEval_sub {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] [DecidableEq F]
-    (a b : Nat) (x y : F) (P Q : CBivariate F) :
-    hasseDerivativeEval a b x y (P - Q) =
-      hasseDerivativeEval a b x y P - hasseDerivativeEval a b x y Q := by
-  rw [← hasseDerivative_eval_eq_eval a b x y (P - Q)]
-  rw [hasseDerivative_sub]
-  rw [evalEval_sub]
-  rw [hasseDerivative_eval_eq_eval, hasseDerivative_eval_eq_eval]
-
-theorem hasseDerivativeEval_CC_mul {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] [DecidableEq F]
-    (c : F) (a b : Nat) (x y : F) (Q : CBivariate F) :
-    hasseDerivativeEval a b x y (CC c * Q) =
-      c * hasseDerivativeEval a b x y Q := by
-  rw [← hasseDerivative_eval_eq_eval a b x y (CC c * Q)]
-  rw [hasseDerivative_CC_mul]
-  rw [evalEval_CC_mul]
-  rw [hasseDerivative_eval_eq_eval]
-
-theorem hasseDerivativeEval_X_mul_zero_xOrder {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] [DecidableEq F]
-    (b : Nat) (x y : F) (Q : CBivariate F) :
-    hasseDerivativeEval 0 b x y (X * Q) =
-      x * hasseDerivativeEval 0 b x y Q := by
-  rw [← hasseDerivative_eval_eq_eval 0 b x y (X * Q)]
-  rw [hasseDerivative_X_mul_zero_xOrder]
-  rw [evalEval_X_mul]
-  rw [hasseDerivative_eval_eq_eval]
-
-theorem hasseDerivativeEval_X_mul_succ_xOrder {F : Type*}
-    [Field F] [BEq F] [LawfulBEq F] [Nontrivial F] [DecidableEq F]
-    (a b : Nat) (x y : F) (Q : CBivariate F) :
-    hasseDerivativeEval (a + 1) b x y (X * Q) =
-      x * hasseDerivativeEval (a + 1) b x y Q +
-        hasseDerivativeEval a b x y Q := by
-  rw [← hasseDerivative_eval_eq_eval (a + 1) b x y (X * Q)]
-  rw [hasseDerivative_X_mul_succ_xOrder]
-  rw [evalEval_add, evalEval_X_mul]
-  rw [hasseDerivative_eval_eq_eval, hasseDerivative_eval_eq_eval]
-
 end CBivariate
 
 namespace GuruswamiSudan

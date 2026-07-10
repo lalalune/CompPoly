@@ -1082,7 +1082,9 @@ private theorem raw_monicNormalize_toPoly_monic {F : Type*}
     intro h
     have hval := congrArg Subtype.val h
     unfold CPolynomial.ofArray at hval
-    exact hp (by simpa using hval)
+    apply hp
+    change p.trim = (0 : CPolynomial F).val
+    exact hval
   have hpPoly : (CPolynomial.ofArray p).toPoly ≠ 0 :=
     (CPolynomial.toPoly_eq_zero_iff (CPolynomial.ofArray p)).not.mpr hpC
   exact Polynomial.monic_normalize hpPoly
@@ -1103,7 +1105,9 @@ private theorem raw_modContext_toPoly_eq_modByMonic {F : Type*}
     exact hqTrim
   have h := CPolynomial.modByMonic_toPoly_eq_modByMonic
     (CPolynomial.ofArray p) (CPolynomial.ofArray q) hqMonic
-  simpa [CPolynomial.modByMonic, hpval, hqval, CPolynomial.ofArray_toPoly] using h
+  rw [CPolynomial.ofArray_toPoly]
+  simpa [CPolynomial.modByMonic, CPolynomial.toPoly, hpval, hqval,
+    CPolynomial.ofArray_toPoly] using h
 
 private theorem raw_mulModWith_toPoly_eq_modByMonic {F : Type*}
     [Field F] [BEq F] [LawfulBEq F] [DecidableEq F]
@@ -1377,7 +1381,7 @@ theorem finiteFieldRootProductWith_dvd_frobenius {F : Type*}
     apply hpMonicNe
     apply CPolynomial.ext
     rw [CPolynomial.trim_eq] at htrim
-    simpa using htrim
+    exact htrim
   have hnormModulus :
       (CPolynomial.ofArray (CPolynomial.Raw.monicNormalize pMonic.val)).toPoly =
         pMonic.toPoly := by

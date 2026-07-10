@@ -379,7 +379,7 @@ private theorem lagrangeToMono_eq_partialSpec
       convert congr_arg (fun x ↦ lagrangeToMonoLevel k x) ih using 1
       · simp +decide [List.drop_eq_getElem_cons]
       · exact Eq.symm (partialMobiusSpec_step k v)
-  simpa using hInd ⟨0, Nat.zero_lt_succ _⟩
+  simpa [lagrangeToMono] using hInd ⟨0, Nat.zero_lt_succ _⟩
 
 /-! ### Main theorem -/
 
