@@ -127,7 +127,10 @@ private def bt0ShoupCtx : SmallPrimeTraceContext BT0 where
   frobenius_fixed := by
     intro a
     have h := FiniteField.pow_card a
-    simpa [bt0_card] using h
+    have hcard : Fintype.card BT0 = 2 := by
+      have hc := bt0_card
+      rwa [Nat.card_eq_fintype_card] at hc
+    simpa [hcard] using h
   p := 2
   k := 1
   p_prime := by decide

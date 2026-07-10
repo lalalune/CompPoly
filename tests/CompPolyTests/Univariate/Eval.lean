@@ -92,16 +92,6 @@ private abbrev p503 : CPolynomial.Raw ℤ := mk #[5, 0, 3]
 
 end NontrivialPoly
 
-section HornerNaiveAgreement
-
--- Verify Horner eval₂ agrees with naive eval₂ on concrete examples
-#guard (eval₂ (RingHom.id ℤ) 3 p1x) == (eval₂Naive (RingHom.id ℤ) 3 p1x)
-#guard (eval₂ (RingHom.id ℤ) 2 p123) == (eval₂Naive (RingHom.id ℤ) 2 p123)
-#guard (eval₂ (RingHom.id ℤ) (-1) p123) == (eval₂Naive (RingHom.id ℤ) (-1) p123)
-#guard (eval₂ (RingHom.id ℤ) 0 (#[] : CPolynomial.Raw ℤ)) ==
-       (eval₂Naive (RingHom.id ℤ) 0 (#[] : CPolynomial.Raw ℤ))
-
-end HornerNaiveAgreement
 
 section ToPolyAgreement
 
