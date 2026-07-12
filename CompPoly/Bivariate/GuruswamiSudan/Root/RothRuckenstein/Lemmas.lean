@@ -818,6 +818,7 @@ theorem composeYCoeff_eq_composeY_coeff {R : Type*}
     (Q : CBivariate R) (p : CPolynomial R) (depth : Nat) :
     CBivariate.composeYCoeff Q p depth = (CBivariate.composeY Q p).coeff depth := by
   unfold CBivariate.composeYCoeff CBivariate.composeY CPolynomial.eval
+    CPolynomial.Raw.eval CPolynomial.Raw.eval₂
   simp [cpoly_mulPowCoeff_eq_coeff_mul_pow]
   simpa [CPolynomial.Raw.eval, CPolynomial.Raw.eval₂] using
     (composeY_coeff_fold_eq Q.val p depth)
@@ -1002,6 +1003,7 @@ theorem composeYCoeff_monomial_zero_eq_composeY_coeff_zero {F : Type*}
     CBivariate.composeYCoeff Q (CPolynomial.monomial 0 (p.coeff 0)) 0 =
       (CBivariate.composeY Q p).coeff 0 := by
   unfold CBivariate.composeYCoeff CBivariate.composeY CPolynomial.eval
+    CPolynomial.Raw.eval CPolynomial.Raw.eval₂
   simp [cpoly_mulPowCoeff_monomial_zero_depth_zero]
   simpa [CPolynomial.Raw.eval, CPolynomial.Raw.eval₂] using
     (composeY_coeff_zero_fold_eq Q.val p)
